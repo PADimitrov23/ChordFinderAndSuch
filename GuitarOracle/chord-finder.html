@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Chord Finder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #17110d;
+    --wood: #2b1e15;
+    --wood-light: #3a2a1c;
+    --wire: #b8ada0;
+    --inlay: #e9dcc3;
+    --amber: #e0a344;
+    --amber-dim: #8a6428;
+    --green: #7fae6a;
+    --red: #c26a55;
+    --text: #f1e9db;
+    --text-dim: #a89985;
+    --mute: #6b5c4c;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background: radial-gradient(ellipse at 50% -10%, #241a12 0%, var(--bg) 55%);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding: 28px 16px 60px;
+  }
+  h1{
+    font-family:'Fraunces', serif;
+    font-weight:500;
+    font-size: 1.4rem;
+    letter-spacing:0.02em;
+    margin: 0 0 2px;
+  }
+  .sub{
+    color: var(--text-dim);
+    font-size:0.85rem;
+    margin-bottom: 22px;
+    text-align:center;
+    max-width:440px;
+  }
+  .key-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom: 18px;
+    font-size:0.82rem;
+    color: var(--text-dim);
+  }
+  select{
+    background: var(--wood-light);
+    color: var(--text);
+    border: 1px solid #4a3624;
+    border-radius: 6px;
+    padding: 5px 8px;
+    font-family:'Inter',sans-serif;
+    font-size:0.82rem;
+  }
+  .readout{
+    background: linear-gradient(180deg, #1c140d, #140e09);
+    border: 1px solid #3a2a1c;
+    border-radius: 14px;
+    padding: 20px 36px;
+    min-width: 260px;
+    text-align:center;
+    margin-bottom: 14px;
+    box-shadow: 0 0 0 1px rgba(224,163,68,0.08), 0 12px 30px rgba(0,0,0,0.4);
+  }
+  .chord-name{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size: 2.4rem;
+    color: var(--amber);
+    line-height:1;
+    min-height: 2.8rem;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap: 10px;
+  }
+  .degree-badge{
+    font-family:'Inter',sans-serif;
+    font-size: 0.9rem;
+    font-weight:600;
+    color: var(--bg);
+    background: var(--text-dim);
+    border-radius: 6px;
+    padding: 2px 8px;
+  }
+  .chord-notes{
+    margin-top:6px;
+    color: var(--text-dim);
+    font-size:0.82rem;
+    letter-spacing:0.03em;
+  }
+  .fit-tag{
+    margin-top:6px;
+    font-size:0.75rem;
+    font-weight:600;
+    letter-spacing:0.02em;
+  }
+  .fit-tag.diatonic{ color: var(--green); }
+  .fit-tag.borrowed{ color: var(--amber); }
+  .fit-tag.flexible{ color: var(--text-dim); }
+  .add-btn{
+    margin-bottom: 22px;
+  }
+  .board-wrap{
+    background: linear-gradient(180deg, var(--wood-light), var(--wood));
+    border-radius: 10px;
+    padding: 18px 14px 10px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.45), inset 0 0 40px rgba(0,0,0,0.25);
+    overflow-x:auto;
+    max-width: 100%;
+  }
+  table{ border-collapse:collapse; }
+  .fretnum{
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    text-align:center;
+    padding-bottom: 6px;
+    width: 42px;
+  }
+  .fretnum.zero{ width: 30px; }
+  .fretnum.mutecol{ width: 30px; }
+  .stringlabel{
+    font-size:0.7rem;
+    color: var(--text-dim);
+    padding-right: 6px;
+    text-align:right;
+    width: 18px;
+  }
+  td.mutecell{
+    width: 30px;
+    text-align:center;
+    cursor:pointer;
+  }
+  .mute-x{
+    width: 22px;
+    height:22px;
+    margin: 0 auto;
+    border-radius:5px;
+    border: 1px solid rgba(184,173,160,0.35);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:0.7rem;
+    font-weight:700;
+    color: var(--text-dim);
+    transition: all 0.12s ease;
+  }
+  .mute-x.active{
+    background: var(--red);
+    border-color: var(--red);
+    color: #1c1207;
+  }
+  td.cell{
+    width:42px;
+    height:38px;
+    text-align:center;
+    vertical-align:middle;
+    position:relative;
+    border-right: 2px solid var(--wire);
+    cursor:pointer;
+  }
+  td.cell.openpos{ width:30px; border-left: 4px solid var(--inlay); }
+  td.cell::before{
+    content:"";
+    position:absolute;
+    left:0; right:0; top:50%;
+    height:2px;
+    background: linear-gradient(90deg, #d8cdbd, #a89880);
+    transform: translateY(-50%);
+    z-index:0;
+  }
+  td.cell:last-child{ border-right:none; }
+  tr.muted-row td.cell{ opacity: 0.25; cursor: default; pointer-events: none; }
+  .dot{
+    position:relative;
+    z-index:2;
+    width: 26px;
+    height:26px;
+    margin:0 auto;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:0.68rem;
+    font-weight:600;
+    color: transparent;
+    background: transparent;
+    border: 1px solid rgba(184,173,160,0.35);
+    transition: all 0.12s ease;
+  }
+  td.cell:hover .dot{ border-color: var(--amber-dim); background: rgba(224,163,68,0.12); }
+  .dot.active{
+    background: var(--amber);
+    color: #1c1207;
+    border-color: var(--amber);
+    box-shadow: 0 0 10px rgba(224,163,68,0.6);
+  }
+  .dot.highlighted{
+    background: rgba(127,174,106,0.18);
+    color: var(--green);
+    border: 1.5px solid var(--green);
+  }
+  .inlay-marker{
+    position:absolute; bottom:-16px; left:50%; transform:translateX(-50%);
+    width:5px; height:5px; border-radius:50%; background: var(--inlay); opacity:0.5; z-index:1;
+  }
+  .controls{ margin-top: 18px; display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
+  button{
+    background: var(--wood-light);
+    color: var(--text);
+    border: 1px solid #4a3624;
+    padding: 9px 16px;
+    border-radius: 8px;
+    font-family:'Inter',sans-serif;
+    font-size:0.82rem;
+    cursor:pointer;
+    transition: background 0.15s;
+  }
+  button:hover{ background:#4a3624; }
+  button.primary{
+    background: var(--amber);
+    color: #1c1207;
+    border-color: var(--amber);
+    font-weight:600;
+  }
+  button.primary:hover{ background: #eab35c; }
+
+  .progression-section{
+    margin-top: 34px;
+    width: 100%;
+    max-width: 640px;
+  }
+  .progression-title{
+    font-family:'Fraunces', serif;
+    font-size: 1.05rem;
+    color: var(--text);
+    margin-bottom: 4px;
+    text-align:center;
+  }
+  .progression-numbers{
+    text-align:center;
+    color: var(--amber);
+    font-weight:600;
+    font-size: 0.95rem;
+    letter-spacing: 0.05em;
+    margin-bottom: 14px;
+    min-height: 1.2rem;
+  }
+  .progression-strip{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    justify-content:center;
+    min-height: 70px;
+    background: rgba(0,0,0,0.2);
+    border: 1px dashed #4a3624;
+    border-radius: 10px;
+    padding: 14px;
+  }
+  .chip{
+    background: linear-gradient(180deg, #241a12, #1a1109);
+    border: 1px solid #4a3624;
+    border-radius: 8px;
+    padding: 8px 12px;
+    text-align:center;
+    min-width: 100px;
+    max-width: 140px;
+    cursor:pointer;
+    position:relative;
+  }
+  .chip-scale{
+    font-size: 0.62rem;
+    color: var(--text-dim);
+    margin-top: 4px;
+    line-height: 1.3;
+  }
+  .chip:hover{ border-color: var(--red); }
+  .chip:hover::after{
+    content:"remove";
+    position:absolute;
+    bottom:-16px; left:50%; transform:translateX(-50%);
+    font-size:0.6rem;
+    color: var(--red);
+  }
+  .chip-name{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    color: var(--amber);
+    font-size: 1rem;
+  }
+  .chip-degree{
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+  .chip-tag{
+    font-size: 0.62rem;
+    font-weight:600;
+    margin-top: 3px;
+  }
+  .chip-tag.diatonic{ color: var(--green); }
+  .chip-tag.borrowed{ color: var(--amber); }
+  .chip-tag.flexible{ color: var(--text-dim); }
+  .empty-note{
+    color: var(--text-dim);
+    font-size: 0.8rem;
+    align-self:center;
+    margin: auto;
+  }
+  .suggest-row{
+    margin-top: 12px;
+    text-align:center;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+  }
+  .suggest-row span.deg{
+    color: var(--amber);
+    font-weight:600;
+  }
+  .mood-panel{
+    margin-top: 16px;
+    background: linear-gradient(180deg, #1c140d, #140e09);
+    border: 1px solid #3a2a1c;
+    border-radius: 10px;
+    padding: 14px 18px;
+    text-align:center;
+  }
+  .mood-label{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size: 1.05rem;
+    color: var(--amber);
+    margin-bottom: 6px;
+  }
+  .mood-tip{
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+  #printSummary{ display:none; }
+  @media print {
+    body > *:not(#printSummary){ display:none !important; }
+    #printSummary{
+      display:block !important;
+      color:#111;
+      background:#fff;
+      padding: 10px;
+      font-family: Georgia, serif;
+    }
+    #printSummary h1{ font-size: 1.4rem; margin-bottom:2px; }
+    #printSummary .meta{ font-size:0.85rem; color:#555; margin-bottom: 18px; }
+    #printSummary table{ width:100%; border-collapse:collapse; margin-bottom:20px; }
+    #printSummary th, #printSummary td{ border:1px solid #ccc; padding:6px 8px; font-size:0.85rem; text-align:left; }
+    #printSummary .mood-block{ font-size:0.9rem; margin-top: 10px; }
+  }
+  .hint{
+    margin-top: 22px;
+    font-size:0.78rem;
+    color: var(--text-dim);
+    text-align:center;
+    max-width: 400px;
+    line-height:1.5;
+  }
+  .custom-tuning-row{
+    display:flex;
+    gap:6px;
+    margin-bottom: 14px;
+    flex-wrap:wrap;
+    justify-content:center;
+  }
+  .custom-tuning-row select{ padding: 4px 5px; font-size:0.75rem; }
+  .highlight-section{
+    margin-top: 28px;
+    width:100%;
+    max-width: 640px;
+    text-align:center;
+  }
+  .highlight-title{
+    font-family:'Fraunces', serif;
+    font-size: 1.05rem;
+    margin-bottom: 10px;
+  }
+  .highlight-palette{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    justify-content:center;
+    margin-bottom: 12px;
+  }
+  .note-toggle{
+    width: 34px;
+    height:34px;
+    border-radius:50%;
+    border: 1px solid rgba(184,173,160,0.35);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:0.78rem;
+    font-weight:600;
+    color: var(--text-dim);
+    cursor:pointer;
+    transition: all 0.12s ease;
+    background: rgba(0,0,0,0.15);
+  }
+  .note-toggle:hover{ border-color: var(--green); }
+  .note-toggle.active{
+    background: var(--green);
+    color: #10160f;
+    border-color: var(--green);
+    box-shadow: 0 0 8px rgba(127,174,106,0.5);
+  }
+</style>
+</head>
+<body>
+
+<h1>Chord Finder</h1>
+<div class="sub">Click a fret to mark it. Click the X to mute a string. Build a chord, then add it to your progression below.</div>
+
+<div class="key-row">
+  <span>Key:</span>
+  <select id="keyRoot"></select>
+  <select id="keyMode">
+    <option value="major">Major</option>
+    <option value="minor">Minor</option>
+  </select>
+  <span style="margin-left:14px;">Tuning:</span>
+  <select id="tuningSelect"></select>
+</div>
+<div class="custom-tuning-row" id="customTuningRow" style="display:none;"></div>
+
+<div class="readout">
+  <div class="chord-name" id="chordName">—</div>
+  <div class="chord-notes" id="chordNotes">select notes on the fretboard</div>
+  <div class="fit-tag" id="fitTag"></div>
+</div>
+
+<button class="primary add-btn" id="addBtn">+ Add to progression</button>
+
+<div class="board-wrap">
+  <table id="board"></table>
+</div>
+
+<div class="controls">
+  <button id="clearBoardBtn">Clear fretboard</button>
+  <button id="flipBtn">Flip strings</button>
+</div>
+
+<div class="hint" id="orientHint"></div>
+
+<div class="progression-section">
+  <div class="progression-title">Your progression</div>
+  <div class="progression-numbers" id="progressionNumbers"></div>
+  <div class="progression-strip" id="progressionStrip">
+    <div class="empty-note">nothing added yet</div>
+  </div>
+  <div class="suggest-row" id="suggestRow"></div>
+  <div class="mood-panel" id="moodPanel" style="display:none;">
+    <div class="mood-label" id="moodLabel"></div>
+    <div class="mood-tip" id="moodTip"></div>
+  </div>
+  <div class="controls">
+    <button id="clearProgBtn">Clear progression</button>
+    <button id="exportPdfBtn">Export as PDF</button>
+    <button id="saveConfigBtn">Save config</button>
+    <button id="loadConfigBtn">Load config</button>
+    <input type="file" id="configFileInput" accept=".json" style="display:none;">
+  </div>
+</div>
+
+<div id="printSummary"></div>
+
+<div class="highlight-section">
+  <div class="highlight-title">Highlight notes on the board</div>
+  <div class="highlight-palette" id="highlightPalette"></div>
+  <button id="clearHighlightBtn">Clear highlights</button>
+</div>
+
+<script>
+const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const TUNINGS = {
+  'Standard E':      [4,9,2,7,11,4],
+  'Drop D':          [2,9,2,7,11,4],
+  'Half-Step Down (Eb)': [3,8,1,6,10,3],
+  'Full-Step Down (D)':  [2,7,0,5,9,2],
+  'Drop C':          [0,7,0,5,9,2],
+  'Drop C#':         [1,8,1,6,10,3],
+  'C# Standard':     [1,6,11,4,8,1],
+  'Open D':          [2,9,2,6,9,2],
+  'Open G':          [2,7,2,7,11,2],
+  'Open C':          [0,7,0,7,0,4],
+  'Open E':          [4,11,4,8,11,4],
+  'Open A':          [4,9,1,4,9,4],
+  'DADGAD':          [2,9,2,7,9,2],
+  'Double Drop D':   [2,9,2,7,11,2]
+};
+let TUNING = TUNINGS['Standard E'].slice(); // low E, A, D, G, B, high e
+const NUM_FRETS = 14;
+
+// [name, intervals from root, quality family]
+const FORMULAS = [
+  ['5',      [0,7],              'power'],
+  ['dim',    [0,3,6],            'dim'],
+  ['aug',    [0,4,8],            'aug'],
+  ['sus2',   [0,2,7],            'sus'],
+  ['sus4',   [0,5,7],            'sus'],
+  ['m',      [0,3,7],            'minor'],
+  ['',       [0,4,7],            'major'],
+  ['m6',     [0,3,7,9],          'minor'],
+  ['6',      [0,4,7,9],          'major'],
+  ['dim7',   [0,3,6,9],          'dim'],
+  ['m7b5',   [0,3,6,10],         'dim'],
+  ['mMaj7',  [0,3,7,11],         'minor'],
+  ['m7',     [0,3,7,10],         'minor'],
+  ['maj7',   [0,4,7,11],         'major'],
+  ['7',      [0,4,7,10],         'major'],
+  ['7sus4',  [0,5,7,10],         'sus'],
+  ['7sus2',  [0,2,7,10],         'sus'],
+  ['add9',   [0,2,4,7],          'major'],
+  ['madd9',  [0,2,3,7],          'minor'],
+  ['m9',     [0,2,3,7,10],       'minor'],
+  ['maj9',   [0,2,4,7,11],       'major'],
+  ['9',      [0,2,4,7,10],       'major'],
+  ['m11',    [0,2,3,5,7,10],     'minor'],
+  ['11',     [0,2,4,5,7,10],     'major'],
+  ['m13',    [0,2,3,7,9,10],     'minor'],
+  ['maj13',  [0,2,4,7,9,11],     'major'],
+  ['13',     [0,2,4,7,9,10],     'major']
+];
+
+// interval-from-key-root -> degree label (accidentals relative to major scale reference)
+const DEGREE_NAMES = {0:'1',1:'b2',2:'2',3:'b3',4:'3',5:'4',6:'b5',7:'5',8:'b6',9:'6',10:'b7',11:'7'};
+
+const MAJOR_DIATONIC = {0:'major',2:'minor',4:'minor',5:'major',7:'major',9:'minor',11:'dim'};
+const MINOR_DIATONIC = {0:'minor',2:'dim',3:'major',5:'minor',7:'minor',8:'major',10:'major'};
+
+// interval -> [scale-degree index 0-6] for each mode, used to name the matching church mode
+const MAJOR_INTERVAL_ORDER = [0,2,4,5,7,9,11];
+const MAJOR_MODE_NAMES = ['Ionian','Dorian','Phrygian','Lydian','Mixolydian','Aeolian','Locrian'];
+const MINOR_INTERVAL_ORDER = [0,2,3,5,7,8,10];
+const MINOR_MODE_NAMES = ['Aeolian','Locrian','Ionian','Dorian','Phrygian','Lydian','Mixolydian'];
+
+function modeNameFor(interval, mode){
+  const order = mode === 'major' ? MAJOR_INTERVAL_ORDER : MINOR_INTERVAL_ORDER;
+  const names = mode === 'major' ? MAJOR_MODE_NAMES : MINOR_MODE_NAMES;
+  const idx = order.indexOf(interval);
+  return idx === -1 ? null : names[idx];
+}
+
+// naive "what usually comes next" by natural (accidental-stripped) degree
+const NEXT_SUGGEST = {
+  '1': ['4','5','6'],
+  '2': ['5','7'],
+  '3': ['6','4'],
+  '4': ['5','1','2'],
+  '5': ['1','6'],
+  '6': ['4','5','2'],
+  '7': ['1']
+};
+
+let selection = new Array(6).fill(null); // null = untouched, 'X' = muted, number = fret
+let progression = []; // {label, degree, tag, scale}
+let flipped = true; // upside-down view: high e on top, low E on bottom
+let highlightSet = new Set(); // pitch classes to highlight everywhere on the board
+
+function populateTuningSelect(){
+  const sel = document.getElementById('tuningSelect');
+  Object.keys(TUNINGS).forEach(name => {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    sel.appendChild(opt);
+  });
+  const customOpt = document.createElement('option');
+  customOpt.value = 'Custom';
+  customOpt.textContent = 'Custom…';
+  sel.appendChild(customOpt);
+}
+
+function buildCustomTuningRow(){
+  const row = document.getElementById('customTuningRow');
+  row.innerHTML = '';
+  const labels = ['low E','A','D','G','B','high e'];
+  for(let s=0; s<6; s++){
+    const sel = document.createElement('select');
+    sel.className = 'custom-string-select';
+    sel.dataset.string = s;
+    NOTE_NAMES.forEach((n, i) => {
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = n;
+      if(i === TUNING[s]) opt.selected = true;
+      sel.appendChild(opt);
+    });
+    sel.title = labels[s] + ' string';
+    sel.addEventListener('change', () => {
+      TUNING[s] = parseInt(sel.value);
+      buildBoard();
+      render();
+    });
+    row.appendChild(sel);
+  }
+}
+
+function populateHighlightPalette(){
+  const wrap = document.getElementById('highlightPalette');
+  wrap.innerHTML = '';
+  NOTE_NAMES.forEach((n, pc) => {
+    const btn = document.createElement('div');
+    btn.className = 'note-toggle';
+    btn.textContent = n;
+    btn.dataset.pc = pc;
+    btn.addEventListener('click', () => {
+      if(highlightSet.has(pc)) highlightSet.delete(pc);
+      else highlightSet.add(pc);
+      btn.classList.toggle('active', highlightSet.has(pc));
+      render();
+    });
+    wrap.appendChild(btn);
+  });
+}
+
+function populateKeySelect(){
+  const sel = document.getElementById('keyRoot');
+  NOTE_NAMES.forEach((n, i) => {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = n;
+    if(i===0) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+function buildBoard(){
+  const table = document.getElementById('board');
+  table.innerHTML = '';
+
+  const headRow = document.createElement('tr');
+  headRow.appendChild(document.createElement('td'));
+  const muteHead = document.createElement('td');
+  muteHead.className = 'fretnum mutecol';
+  muteHead.textContent = '';
+  headRow.appendChild(muteHead);
+  for(let f=0; f<=NUM_FRETS; f++){
+    const th = document.createElement('td');
+    th.className = 'fretnum' + (f===0 ? ' zero':'');
+    th.textContent = f===0 ? 'open' : f;
+    headRow.appendChild(th);
+  }
+  table.appendChild(headRow);
+
+  const renderOrder = flipped ? [5,4,3,2,1,0] : [0,1,2,3,4,5];
+  for(const s of renderOrder){
+    const row = document.createElement('tr');
+    row.id = 'row-' + s;
+    const label = document.createElement('td');
+    label.className = 'stringlabel';
+    label.textContent = (s === 5) ? noteName(TUNING[s]).toLowerCase() : noteName(TUNING[s]);
+    label.title = (s === 0) ? 'lowest string' : (s === 5) ? 'highest string' : '';
+    row.appendChild(label);
+
+    const muteCell = document.createElement('td');
+    muteCell.className = 'mutecell';
+    const muteX = document.createElement('div');
+    muteX.className = 'mute-x';
+    muteX.textContent = 'X';
+    muteCell.appendChild(muteX);
+    muteCell.addEventListener('click', () => onMuteClick(s));
+    row.appendChild(muteCell);
+
+    for(let f=0; f<=NUM_FRETS; f++){
+      const cell = document.createElement('td');
+      cell.className = 'cell' + (f===0 ? ' openpos':'');
+      cell.dataset.string = s;
+      cell.dataset.fret = f;
+
+      const dot = document.createElement('div');
+      dot.className = 'dot';
+      cell.appendChild(dot);
+
+      if(s===0 && [3,5,7,9].includes(f)){
+        const marker = document.createElement('div');
+        marker.className = 'inlay-marker';
+        cell.appendChild(marker);
+      }
+
+      cell.addEventListener('click', () => onCellClick(s, f));
+      row.appendChild(cell);
+    }
+    table.appendChild(row);
+  }
+}
+
+function onMuteClick(s){
+  selection[s] = (selection[s] === 'X') ? null : 'X';
+  render();
+}
+
+function onCellClick(s, f){
+  if(selection[s] === f){
+    selection[s] = null;
+  } else {
+    selection[s] = f;
+  }
+  render();
+}
+
+function pitchClass(stringIdx, fret){ return (TUNING[stringIdx] + fret) % 12; }
+function noteName(pc){ return NOTE_NAMES[pc]; }
+
+function render(){
+  document.querySelectorAll('.cell').forEach(cell => {
+    const s = parseInt(cell.dataset.string);
+    const f = parseInt(cell.dataset.fret);
+    const dot = cell.querySelector('.dot');
+    const pc = pitchClass(s,f);
+    const active = selection[s] === f;
+    const highlighted = highlightSet.has(pc);
+    dot.classList.toggle('active', active);
+    dot.classList.toggle('highlighted', highlighted && !active);
+    dot.textContent = (active || highlighted) ? noteName(pc) : '';
+  });
+
+  for(let s=0; s<6; s++){
+    const row = document.getElementById('row-' + s);
+    const muted = selection[s] === 'X';
+    row.classList.toggle('muted-row', muted);
+    row.querySelector('.mute-x').classList.toggle('active', muted);
+  }
+
+  computeChord();
+}
+
+function classifyChord(pcs, bassPc){
+  if(pcs.length === 1){
+    return {label: noteName(pcs[0]), root: pcs[0], quality: 'single', notesStr: 'single note'};
+  }
+  let best = null;
+  for(const root of pcs){
+    const rel = new Set(pcs.map(pc => (pc - root + 12) % 12));
+    for(const [name, formula, quality] of FORMULAS){
+      const formulaSet = new Set(formula);
+      let isSubset = true;
+      for(const r of rel){ if(!formulaSet.has(r)){ isSubset = false; break; } }
+      if(!isSubset) continue;
+      const extra = formula.length - rel.size;
+      if(best === null || extra < best.extra || (extra === best.extra && root === bassPc && best.root !== bassPc)){
+        best = {root, name, extra, quality};
+      }
+    }
+  }
+  if(best === null){
+    return {label: null, root: null, quality: null, notesStr: pcs.map(noteName).join(', ') + ' — no clean match'};
+  }
+  let label = noteName(best.root) + best.name;
+  if(best.root !== bassPc) label += ' / ' + noteName(bassPc);
+  return {label, root: best.root, quality: best.quality, notesStr: pcs.map(noteName).join(' · ')};
+}
+
+function degreeInfo(rootPc, quality){
+  const keyRoot = parseInt(document.getElementById('keyRoot').value);
+  const mode = document.getElementById('keyMode').value;
+  const keyName = noteName(keyRoot) + ' ' + (mode === 'major' ? 'major' : 'minor');
+  const interval = (rootPc - keyRoot + 12) % 12;
+  const degree = DEGREE_NAMES[interval];
+  const diatonicTable = mode === 'major' ? MAJOR_DIATONIC : MINOR_DIATONIC;
+  const otherMode = mode === 'major' ? 'minor' : 'major';
+  const otherTable = mode === 'major' ? MINOR_DIATONIC : MAJOR_DIATONIC;
+  const rootNote = noteName(rootPc);
+
+  const flexible = (quality === 'sus' || quality === 'power' || quality === 'single');
+  const expected = diatonicTable[interval];
+  const matchesHere = expected !== undefined && (flexible || expected === quality);
+
+  if(matchesHere){
+    const modeName = modeNameFor(interval, mode);
+    return {
+      degree, tag: 'diatonic',
+      tagText: 'in key — straight out of ' + keyName,
+      scale: rootNote + ' ' + modeName + ' (the ' + keyName + ' scale, same notes)'
+    };
+  }
+
+  const expectedOther = otherTable[interval];
+  const matchesOther = expectedOther !== undefined && (flexible || expectedOther === quality);
+  if(matchesOther){
+    const modeName = modeNameFor(interval, otherMode);
+    const parallelName = noteName(keyRoot) + ' ' + otherMode;
+    return {
+      degree, tag: 'borrowed',
+      tagText: 'borrowed from parallel ' + otherMode + ' (' + parallelName + ')',
+      scale: rootNote + ' ' + modeName + ' (borrowed from ' + parallelName + ')'
+    };
+  }
+
+  return {
+    degree, tag: 'borrowed',
+    tagText: 'chromatic — no clean parent scale, treat as a passing/secondary chord',
+    scale: 'no single parent scale — works as color/tension, resolve it quickly'
+  };
+}
+
+function computeChord(){
+  const nameEl = document.getElementById('chordName');
+  const notesEl = document.getElementById('chordNotes');
+  const fitEl = document.getElementById('fitTag');
+
+  const playedStrings = [];
+  for(let s=0; s<6; s++){
+    if(typeof selection[s] === 'number'){
+      playedStrings.push({string: s, pc: pitchClass(s, selection[s])});
+    }
+  }
+
+  if(playedStrings.length === 0){
+    nameEl.innerHTML = '—';
+    notesEl.textContent = 'select notes on the fretboard';
+    fitEl.textContent = '';
+    fitEl.className = 'fit-tag';
+    return;
+  }
+
+  const pcs = [...new Set(playedStrings.map(p => p.pc))];
+  const bassPc = playedStrings.reduce((lowest, p) => p.string < lowest.string ? p : lowest, playedStrings[0]).pc;
+  const result = classifyChord(pcs, bassPc);
+
+  if(result.label === null){
+    nameEl.textContent = '?';
+    notesEl.textContent = result.notesStr;
+    fitEl.textContent = '';
+    fitEl.className = 'fit-tag';
+    return;
+  }
+
+  const dInfo = degreeInfo(result.root, result.quality);
+  nameEl.innerHTML = result.label + ' <span class="degree-badge">' + dInfo.degree + '</span>';
+  notesEl.textContent = result.notesStr;
+  fitEl.innerHTML = dInfo.tagText + '<br><span style="color:var(--text-dim); font-weight:400;">scale: ' + dInfo.scale + '</span>';
+  fitEl.className = 'fit-tag ' + dInfo.tag;
+}
+
+function currentChordData(){
+  const playedStrings = [];
+  for(let s=0; s<6; s++){
+    if(typeof selection[s] === 'number'){
+      playedStrings.push({string: s, pc: pitchClass(s, selection[s])});
+    }
+  }
+  if(playedStrings.length === 0) return null;
+  const pcs = [...new Set(playedStrings.map(p => p.pc))];
+  const bassPc = playedStrings.reduce((lowest, p) => p.string < lowest.string ? p : lowest, playedStrings[0]).pc;
+  const result = classifyChord(pcs, bassPc);
+  if(result.label === null) return null;
+  const dInfo = degreeInfo(result.root, result.quality);
+  return {label: result.label, degree: dInfo.degree, tag: dInfo.tag, tagText: dInfo.tagText, scale: dInfo.scale, quality: result.quality};
+}
+
+function renderProgression(){
+  const strip = document.getElementById('progressionStrip');
+  const numbersEl = document.getElementById('progressionNumbers');
+  const suggestEl = document.getElementById('suggestRow');
+  strip.innerHTML = '';
+
+  if(progression.length === 0){
+    strip.innerHTML = '<div class="empty-note">nothing added yet</div>';
+    numbersEl.textContent = '';
+    suggestEl.textContent = '';
+    document.getElementById('moodPanel').style.display = 'none';
+    return;
+  }
+
+  progression.forEach((chord, idx) => {
+    const chip = document.createElement('div');
+    chip.className = 'chip';
+    chip.innerHTML = '<div class="chip-name">' + chord.label + '</div>' +
+                      '<div class="chip-degree">' + chord.degree + '</div>' +
+                      '<div class="chip-tag ' + chord.tag + '">' + (chord.tag === 'diatonic' ? 'in key' : chord.tag === 'borrowed' ? 'borrowed' : 'flexible') + '</div>' +
+                      '<div class="chip-scale">' + chord.scale + '</div>';
+    chip.addEventListener('click', () => {
+      progression.splice(idx, 1);
+      renderProgression();
+    });
+    strip.appendChild(chip);
+  });
+
+  numbersEl.textContent = progression.map(c => c.degree).join('  -  ');
+
+  const last = progression[progression.length - 1];
+  const naturalDegree = last.degree.replace('b', '');
+  const suggestions = NEXT_SUGGEST[naturalDegree];
+  if(suggestions){
+    suggestEl.innerHTML = 'often leads to: ' + suggestions.map(d => '<span class="deg">' + d + '</span>').join(', ');
+  } else {
+    suggestEl.textContent = '';
+  }
+
+  renderMood();
+}
+
+function renderMood(){
+  const panel = document.getElementById('moodPanel');
+  if(progression.length < 2){
+    panel.style.display = 'none';
+    return;
+  }
+  panel.style.display = 'block';
+
+  const majorCount = progression.filter(c => c.quality === 'major').length;
+  const minorCount = progression.filter(c => c.quality === 'minor').length;
+  const dimCount = progression.filter(c => c.quality === 'dim').length;
+  const augCount = progression.filter(c => c.quality === 'aug').length;
+  const susCount = progression.filter(c => c.quality === 'sus' || c.quality === 'power').length;
+  const borrowedCount = progression.filter(c => c.tag === 'borrowed').length;
+  const endsOnTonic = progression[progression.length - 1].degree === '1';
+  const startsOnTonic = progression[0].degree === '1';
+
+  const moodWords = [];
+  if(borrowedCount > 0) moodWords.push('colorful tension');
+  if(susCount > 0) moodWords.push('dreamy / unresolved');
+  if(dimCount > 0 || augCount > 0) moodWords.push('unstable, dramatic');
+  if(majorCount > minorCount * 1.5) moodWords.push('bright, open');
+  else if(minorCount > majorCount * 1.5) moodWords.push('melancholic, introspective');
+  else if(majorCount > 0 && minorCount > 0) moodWords.push('bittersweet');
+
+  if(moodWords.length === 0) moodWords.push('steady, neutral');
+
+  document.getElementById('moodLabel').textContent = moodWords.join(' · ');
+
+  const tips = [];
+  if(endsOnTonic){
+    tips.push('Lands back on the 1 — this reads as resolved, so it works well closing out a verse or chorus.');
+  } else {
+    tips.push('Doesn\'t resolve to the 1 — it wants to keep going, so it\'s a strong candidate for a verse or pre-chorus that leads into something else.');
+  }
+  if(borrowedCount > 0){
+    tips.push('The borrowed chord(s) here would hit hardest saved for a bridge or a one-time pre-chorus lift, rather than looping every verse.');
+  }
+  if(susCount > 0){
+    tips.push('The sus chord keeps things ambiguous — try resolving it (sus2/sus4 → the plain triad) right at a section change for a satisfying release.');
+  }
+  if(majorCount > 0 && minorCount > 0 && borrowedCount === 0){
+    tips.push('Mixing major and minor diatonic chords like this is a great way to keep a single section from feeling one-note emotionally.');
+  }
+
+  document.getElementById('moodTip').textContent = tips.join(' ');
+}
+
+document.getElementById('addBtn').addEventListener('click', () => {
+  const data = currentChordData();
+  if(data === null) return;
+  progression.push(data);
+  renderProgression();
+});
+
+document.getElementById('clearBoardBtn').addEventListener('click', () => {
+  selection = new Array(6).fill(null);
+  render();
+});
+
+document.getElementById('flipBtn').addEventListener('click', () => {
+  flipped = !flipped;
+  buildBoard();
+  render();
+  updateOrientHint();
+});
+
+function updateOrientHint(){
+  document.getElementById('orientHint').textContent = flipped
+    ? 'High e string is on top, low E on the bottom — like holding the guitar and looking down at it yourself.'
+    : 'Low E string is on top, high e on the bottom — the standard tab-book view.';
+}
+
+document.getElementById('clearProgBtn').addEventListener('click', () => {
+  progression = [];
+  renderProgression();
+});
+
+document.getElementById('keyRoot').addEventListener('change', () => { computeChord(); });
+document.getElementById('keyMode').addEventListener('change', () => { computeChord(); });
+
+document.getElementById('tuningSelect').addEventListener('change', (e) => {
+  const val = e.target.value;
+  const customRow = document.getElementById('customTuningRow');
+  if(val === 'Custom'){
+    customRow.style.display = 'flex';
+    buildCustomTuningRow();
+  } else {
+    customRow.style.display = 'none';
+    TUNING = TUNINGS[val].slice();
+  }
+  buildBoard();
+  render();
+});
+
+document.getElementById('clearHighlightBtn').addEventListener('click', () => {
+  highlightSet.clear();
+  document.querySelectorAll('.note-toggle').forEach(b => b.classList.remove('active'));
+  render();
+});
+
+document.getElementById('exportPdfBtn').addEventListener('click', () => {
+  buildPrintSummary();
+  setTimeout(() => window.print(), 50);
+});
+
+function buildPrintSummary(){
+  const keyRoot = document.getElementById('keyRoot').value;
+  const keyMode = document.getElementById('keyMode').value;
+  const keyLabel = noteName(parseInt(keyRoot)) + ' ' + (keyMode === 'major' ? 'major' : 'minor');
+  const tuningLabel = document.getElementById('tuningSelect').value;
+
+  let rows = '';
+  progression.forEach((c, i) => {
+    rows += '<tr><td>' + (i+1) + '</td><td>' + c.label + '</td><td>' + c.degree + '</td>' +
+            '<td>' + (c.tag === 'diatonic' ? 'in key' : 'borrowed') + '</td><td>' + c.scale + '</td></tr>';
+  });
+  if(rows === ''){
+    rows = '<tr><td colspan="5">No chords saved yet.</td></tr>';
+  }
+
+  const numbersLine = progression.map(c => c.degree).join('  -  ');
+
+  document.getElementById('printSummary').innerHTML =
+    '<h1>Chord Progression</h1>' +
+    '<div class="meta">Key: ' + keyLabel + ' &nbsp;·&nbsp; Tuning: ' + tuningLabel + ' &nbsp;·&nbsp; Numbers: ' + numbersLine + '</div>' +
+    '<table><thead><tr><th>#</th><th>Chord</th><th>Degree</th><th>Fit</th><th>Scale</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+    '<div class="mood-block"><strong>' + (document.getElementById('moodLabel').textContent || '') + '</strong><br>' +
+    (document.getElementById('moodTip').textContent || '') + '</div>';
+}
+
+document.getElementById('saveConfigBtn').addEventListener('click', () => {
+  const state = {
+    key: {
+      root: parseInt(document.getElementById('keyRoot').value),
+      mode: document.getElementById('keyMode').value
+    },
+    tuning: {
+      name: document.getElementById('tuningSelect').value,
+      pcs: TUNING.slice()
+    },
+    flipped: flipped,
+    highlights: Array.from(highlightSet),
+    progression: progression
+  };
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'chord-finder-config.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById('loadConfigBtn').addEventListener('click', () => {
+  document.getElementById('configFileInput').click();
+});
+
+document.getElementById('configFileInput').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (evt) => {
+    try{
+      const data = JSON.parse(evt.target.result);
+      applyLoadedConfig(data);
+    } catch(err){
+      alert('Could not read that config file — it may not be valid JSON from this tool.');
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+function applyLoadedConfig(data){
+  if(data.key){
+    document.getElementById('keyRoot').value = data.key.root;
+    document.getElementById('keyMode').value = data.key.mode;
+  }
+  if(data.tuning){
+    TUNING = data.tuning.pcs.slice();
+    const tuningSel = document.getElementById('tuningSelect');
+    const isKnown = Object.keys(TUNINGS).includes(data.tuning.name) &&
+                    JSON.stringify(TUNINGS[data.tuning.name]) === JSON.stringify(data.tuning.pcs);
+    if(isKnown){
+      tuningSel.value = data.tuning.name;
+      document.getElementById('customTuningRow').style.display = 'none';
+    } else {
+      tuningSel.value = 'Custom';
+      document.getElementById('customTuningRow').style.display = 'flex';
+      buildCustomTuningRow();
+    }
+  }
+  if(typeof data.flipped === 'boolean'){
+    flipped = data.flipped;
+    updateOrientHint();
+  }
+  if(Array.isArray(data.highlights)){
+    highlightSet = new Set(data.highlights);
+    document.querySelectorAll('.note-toggle').forEach(btn => {
+      btn.classList.toggle('active', highlightSet.has(parseInt(btn.dataset.pc)));
+    });
+  }
+  if(Array.isArray(data.progression)){
+    progression = data.progression;
+  }
+  buildBoard();
+  render();
+  renderProgression();
+}
+
+populateKeySelect();
+populateTuningSelect();
+populateHighlightPalette();
+buildBoard();
+render();
+renderProgression();
+updateOrientHint();
+</script>
+</body>
+</html>
