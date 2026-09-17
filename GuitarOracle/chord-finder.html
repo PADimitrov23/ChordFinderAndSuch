@@ -115,10 +115,27 @@
   .board-wrap{
     background: linear-gradient(180deg, var(--wood-light), var(--wood));
     border-radius: 10px;
-    padding: 18px 14px 10px;
+    padding: 18px 14px 14px;
     box-shadow: 0 20px 40px rgba(0,0,0,0.45), inset 0 0 40px rgba(0,0,0,0.25);
     overflow-x:auto;
     max-width: 100%;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(224,163,68,0.4) transparent;
+  }
+  .board-wrap::-webkit-scrollbar{
+    height: 7px;
+  }
+  .board-wrap::-webkit-scrollbar-track{
+    background: rgba(0,0,0,0.25);
+    border-radius: 6px;
+    margin: 0 4px;
+  }
+  .board-wrap::-webkit-scrollbar-thumb{
+    background: rgba(224,163,68,0.4);
+    border-radius: 6px;
+  }
+  .board-wrap:hover::-webkit-scrollbar-thumb{
+    background: rgba(224,163,68,0.65);
   }
   table{ border-collapse:collapse; }
   .fretnum{
