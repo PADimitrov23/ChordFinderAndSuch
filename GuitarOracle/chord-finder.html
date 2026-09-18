@@ -370,16 +370,103 @@
     body > *:not(#printSummary){ display:none !important; }
     #printSummary{
       display:block !important;
-      color:#111;
+      color:#1a1a1a;
       background:#fff;
-      padding: 10px;
-      font-family: Georgia, serif;
+      padding: 6px;
+      font-family: Georgia, 'Times New Roman', serif;
     }
-    #printSummary h1{ font-size: 1.4rem; margin-bottom:2px; }
-    #printSummary .meta{ font-size:0.85rem; color:#555; margin-bottom: 18px; }
-    #printSummary table{ width:100%; border-collapse:collapse; margin-bottom:20px; }
-    #printSummary th, #printSummary td{ border:1px solid #ccc; padding:6px 8px; font-size:0.85rem; text-align:left; }
-    #printSummary .mood-block{ font-size:0.9rem; margin-top: 10px; }
+    .pd-header{
+      border-bottom: 2px solid #c8862f;
+      padding-bottom: 10px;
+      margin-bottom: 18px;
+    }
+    .pd-header h1{
+      font-family: 'Fraunces', Georgia, serif;
+      font-size: 1.6rem;
+      margin: 0 0 6px;
+      color: #1a1a1a;
+    }
+    .pd-meta{
+      font-family: Arial, sans-serif;
+      font-size: 0.8rem;
+      color: #555;
+      display:flex;
+      gap: 22px;
+      flex-wrap: wrap;
+    }
+    .pd-grid{
+      display:flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    .pd-card{
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 10px;
+      width: 150px;
+      text-align:center;
+      page-break-inside: avoid;
+    }
+    .pd-card-head{
+      display:flex;
+      justify-content:space-between;
+      align-items:baseline;
+      margin-bottom: 4px;
+    }
+    .pd-name{
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight:600;
+      font-size: 1rem;
+      color: #1a1a1a;
+    }
+    .pd-degree{
+      font-family: Arial, sans-serif;
+      font-size: 0.75rem;
+      font-weight:700;
+      color: #fff;
+      background: #333;
+      border-radius: 4px;
+      padding: 1px 6px;
+    }
+    .pd-diagram{ margin: 4px 0; }
+    .pd-diagram svg{ width: 100%; height: auto; }
+    .pd-tag{
+      display:inline-block;
+      font-family: Arial, sans-serif;
+      font-size: 0.65rem;
+      font-weight:700;
+      border-radius: 10px;
+      padding: 2px 8px;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .pd-tag-in{ background:#e5f0e0; color:#3d6b2e; }
+    .pd-tag-borrowed{ background:#f6ebd8; color:#8a5a1a; }
+    .pd-scale{
+      font-family: Arial, sans-serif;
+      font-size: 0.68rem;
+      color: #666;
+      line-height: 1.4;
+    }
+    .pd-mood{
+      border-top: 1px solid #ddd;
+      padding-top: 12px;
+      font-family: Arial, sans-serif;
+    }
+    .pd-mood h2{
+      font-family: 'Fraunces', Georgia, serif;
+      font-size: 1.1rem;
+      color: #c8862f;
+      margin: 0 0 6px;
+    }
+    .pd-mood p{
+      font-size: 0.82rem;
+      color: #444;
+      line-height: 1.5;
+      margin: 0;
+    }
   }
   .hint{
     margin-top: 22px;
@@ -879,7 +966,11 @@ function currentChordData(){
   const result = classifyChord(pcs, bassPc);
   if(result.label === null) return null;
   const dInfo = degreeInfo(result.root, result.quality);
-  return {label: result.label, degree: dInfo.degree, tag: dInfo.tag, tagText: dInfo.tagText, scale: dInfo.scale, quality: result.quality};
+  return {
+    label: result.label, degree: dInfo.degree, tag: dInfo.tag, tagText: dInfo.tagText,
+    scale: dInfo.scale, quality: result.quality,
+    frets: selection.slice(), tuning: TUNING.slice()
+  };
 }
 
 function renderProgression(){
@@ -1030,29 +1121,101 @@ document.getElementById('exportPdfBtn').addEventListener('click', () => {
   setTimeout(() => window.print(), 50);
 });
 
+function chordDiagramSVG(frets, tuningPcs){
+  const W = 130, H = 165;
+  const marginTop = 34, marginBottom = 22, marginLeft = 18, marginRight = 18;
+  const numRows = 4;
+  const stringGap = (W - marginLeft - marginRight) / 5;
+  const fretGap = (H - marginTop - marginBottom) / numRows;
+  const stringX = i => marginLeft + i * stringGap;
+  const fretY = row => marginTop + row * fretGap;
+
+  const usedFrets = frets.filter(f => typeof f === 'number' && f > 0);
+  let windowStart = 1, isOpenPosition = true;
+  if(usedFrets.length > 0){
+    const maxUsed = Math.max(...usedFrets);
+    const minUsed = Math.min(...usedFrets);
+    if(maxUsed > numRows){
+      windowStart = minUsed;
+      isOpenPosition = false;
+    }
+  }
+
+  let svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg">';
+
+  // fret lines
+  for(let r = 0; r <= numRows; r++){
+    const y = fretY(r);
+    const strokeW = (r === 0 && isOpenPosition) ? 3.5 : 1.2;
+    svg += '<line x1="' + stringX(0) + '" y1="' + y + '" x2="' + stringX(5) + '" y2="' + y + '" stroke="#333" stroke-width="' + strokeW + '"/>';
+  }
+  // string lines
+  for(let i = 0; i < 6; i++){
+    svg += '<line x1="' + stringX(i) + '" y1="' + fretY(0) + '" x2="' + stringX(i) + '" y2="' + fretY(numRows) + '" stroke="#555" stroke-width="1"/>';
+  }
+  // position label if not open position
+  if(!isOpenPosition){
+    svg += '<text x="' + (stringX(0) - 12) + '" y="' + (fretY(0) + fretGap*0.5 + 4) + '" font-size="9" fill="#333" text-anchor="end">' + windowStart + 'fr</text>';
+  }
+  // per-string markers
+  for(let i = 0; i < 6; i++){
+    const val = frets[i];
+    const x = stringX(i);
+    if(val === 'X' || val === null || val === undefined){
+      svg += '<text x="' + x + '" y="' + (marginTop - 18) + '" font-size="13" fill="#a33" text-anchor="middle" font-weight="700">X</text>';
+    } else if(val === 0){
+      svg += '<circle cx="' + x + '" cy="' + (marginTop - 12) + '" r="5.5" fill="none" stroke="#333" stroke-width="1.5"/>';
+    } else {
+      const row = val - windowStart + 1;
+      if(row >= 1 && row <= numRows){
+        const cy = fretY(row - 1) + fretGap/2;
+        svg += '<circle cx="' + x + '" cy="' + cy + '" r="7.5" fill="#c8862f"/>';
+      }
+    }
+  }
+  // open-string note names under diagram
+  for(let i = 0; i < 6; i++){
+    const label = (i === 5) ? noteName(tuningPcs[i]).toLowerCase() : noteName(tuningPcs[i]);
+    svg += '<text x="' + stringX(i) + '" y="' + (fretY(numRows) + 13) + '" font-size="8" fill="#777" text-anchor="middle">' + label + '</text>';
+  }
+
+  svg += '</svg>';
+  return svg;
+}
+
 function buildPrintSummary(){
   const keyRoot = document.getElementById('keyRoot').value;
   const keyMode = document.getElementById('keyMode').value;
   const keyLabel = noteName(parseInt(keyRoot)) + ' ' + (keyMode === 'major' ? 'major' : 'minor');
   const tuningLabel = document.getElementById('tuningSelect').value;
+  const numbersLine = progression.map(c => c.degree).join('  –  ');
 
-  let rows = '';
+  let cards = '';
   progression.forEach((c, i) => {
-    rows += '<tr><td>' + (i+1) + '</td><td>' + c.label + '</td><td>' + c.degree + '</td>' +
-            '<td>' + (c.tag === 'diatonic' ? 'in key' : 'borrowed') + '</td><td>' + c.scale + '</td></tr>';
+    const diagram = c.frets ? chordDiagramSVG(c.frets, c.tuning || TUNING) : '';
+    const tagClass = c.tag === 'diatonic' ? 'pd-tag-in' : 'pd-tag-borrowed';
+    const tagText = c.tag === 'diatonic' ? 'in key' : 'borrowed';
+    cards += '<div class="pd-card">' +
+      '<div class="pd-card-head"><span class="pd-name">' + c.label + '</span><span class="pd-degree">' + c.degree + '</span></div>' +
+      '<div class="pd-diagram">' + diagram + '</div>' +
+      '<div class="pd-tag ' + tagClass + '">' + tagText + '</div>' +
+      '<div class="pd-scale">' + c.scale + '</div>' +
+    '</div>';
   });
-  if(rows === ''){
-    rows = '<tr><td colspan="5">No chords saved yet.</td></tr>';
+  if(cards === ''){
+    cards = '<p style="color:#777;">No chords saved yet — add some to your progression first.</p>';
   }
 
-  const numbersLine = progression.map(c => c.degree).join('  -  ');
+  const moodLabel = document.getElementById('moodLabel').textContent || '';
+  const moodTip = document.getElementById('moodTip').textContent || '';
 
   document.getElementById('printSummary').innerHTML =
-    '<h1>Chord Progression</h1>' +
-    '<div class="meta">Key: ' + keyLabel + ' &nbsp;·&nbsp; Tuning: ' + tuningLabel + ' &nbsp;·&nbsp; Numbers: ' + numbersLine + '</div>' +
-    '<table><thead><tr><th>#</th><th>Chord</th><th>Degree</th><th>Fit</th><th>Scale</th></tr></thead><tbody>' + rows + '</tbody></table>' +
-    '<div class="mood-block"><strong>' + (document.getElementById('moodLabel').textContent || '') + '</strong><br>' +
-    (document.getElementById('moodTip').textContent || '') + '</div>';
+    '<div class="pd-header">' +
+      '<h1>Chord Progression</h1>' +
+      '<div class="pd-meta"><span><strong>Key:</strong> ' + keyLabel + '</span><span><strong>Tuning:</strong> ' + tuningLabel + '</span><span><strong>Numbers:</strong> ' + numbersLine + '</span></div>' +
+    '</div>' +
+    '<div class="pd-grid">' + cards + '</div>' +
+    (moodLabel ? '<div class="pd-mood"><h2>' + moodLabel + '</h2><p>' + moodTip + '</p></div>' : '');
 }
 
 document.getElementById('saveConfigBtn').addEventListener('click', () => {
