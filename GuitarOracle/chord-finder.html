@@ -484,6 +484,33 @@
     justify-content:center;
   }
   .custom-tuning-row select{ padding: 4px 5px; font-size:0.75rem; }
+  .chord-lookup-row{
+    display:flex;
+    gap:8px;
+    margin-bottom: 6px;
+    flex-wrap:wrap;
+    justify-content:center;
+  }
+  .chord-lookup-row input{
+    background: var(--wood-light);
+    color: var(--text);
+    border: 1px solid #4a3624;
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-family:'Inter',sans-serif;
+    font-size:0.85rem;
+    width: 260px;
+    max-width: 60vw;
+  }
+  .chord-lookup-row input::placeholder{ color: var(--text-dim); }
+  .chord-lookup-status{
+    font-size:0.75rem;
+    color: var(--text-dim);
+    text-align:center;
+    margin-bottom: 18px;
+    min-height: 1rem;
+  }
+  .chord-lookup-status.error{ color: var(--red); }
   .highlight-section{
     margin-top: 28px;
     width:100%;
@@ -542,6 +569,12 @@
   <select id="tuningSelect"></select>
 </div>
 <div class="custom-tuning-row" id="customTuningRow" style="display:none;"></div>
+
+<div class="chord-lookup-row">
+  <input type="text" id="chordNameInput" placeholder="Type a chord, e.g. Cmaj7, Am, G7, Dsus4">
+  <button class="primary" id="showChordBtn">Show on fretboard</button>
+</div>
+<div class="chord-lookup-status" id="chordLookupStatus"></div>
 
 <div class="readout">
   <div class="chord-name" id="chordName">—</div>
@@ -953,7 +986,113 @@ function computeChord(){
   fitEl.className = 'fit-tag ' + dInfo.tag;
 }
 
-function currentChordData(){
+const REQUIRED_TONES = {
+  '5':[0,7], 'dim':[0,3,6], 'aug':[0,4,8], 'sus2':[0,2,7], 'sus4':[0,5,7],
+  'm':[0,3], '':[0,4], 'm6':[0,3,9], '6':[0,4,9], 'dim7':[0,3,6,9],
+  'm7b5':[0,3,6,10], 'mMaj7':[0,3,11], 'm7':[0,3,10], 'maj7':[0,4,11], '7':[0,4,10],
+  '7sus4':[0,5,10], '7sus2':[0,2,10], 'add9':[0,4,2], 'madd9':[0,3,2],
+  'm9':[0,3,10,2], 'maj9':[0,4,11,2], '9':[0,4,10,2],
+  'm11':[0,3,10,5], '11':[0,4,10,5], 'm13':[0,3,10,9], 'maj13':[0,4,11,9], '13':[0,4,10,9]
+};
+
+function parseChordInput(str){
+  str = (str || '').trim();
+  if(!str) return null;
+  const m = str.match(/^([A-Ga-g])(#|b|♯|♭)?/);
+  if(!m) return null;
+  const letterPc = {C:0,D:2,E:4,F:5,G:7,A:9,B:11}[m[1].toUpperCase()];
+  let rootPc = letterPc;
+  if(m[2] === '#' || m[2] === '♯') rootPc = (rootPc + 1) % 12;
+  if(m[2] === 'b' || m[2] === '♭') rootPc = (rootPc + 11) % 12;
+  const rest = str.slice(m[0].length).trim();
+
+  const patterns = [
+    [/^maj13$/i,'maj13'],[/^m13$/i,'m13'],[/^min13$/i,'m13'],[/^13$/,'13'],
+    [/^m11$/i,'m11'],[/^min11$/i,'m11'],[/^11$/,'11'],
+    [/^maj9$/i,'maj9'],[/^m9$/i,'m9'],[/^min9$/i,'m9'],[/^9$/,'9'],
+    [/^madd9$/i,'madd9'],[/^minadd9$/i,'madd9'],[/^add9$/i,'add9'],
+    [/^m7b5$/i,'m7b5'],[/^m7-5$/i,'m7b5'],[/^ø7?$/,'m7b5'],
+    [/^dim7$/i,'dim7'],[/^o7$/i,'dim7'],
+    [/^mmaj7$/i,'mMaj7'],[/^minmaj7$/i,'mMaj7'],
+    [/^maj7$/i,'maj7'],[/^M7$/,'maj7'],[/^Δ7?$/,'maj7'],
+    [/^m7$/,'m7'],[/^min7$/i,'m7'],
+    [/^7sus4$/i,'7sus4'],[/^7sus$/i,'7sus4'],[/^7sus2$/i,'7sus2'],
+    [/^7$/,'7'],
+    [/^m6$/,'m6'],[/^min6$/i,'m6'],[/^6$/,'6'],
+    [/^dim$/i,'dim'],[/^o$/,'dim'],
+    [/^aug$/i,'aug'],[/^\+$/,'aug'],
+    [/^sus2$/i,'sus2'],
+    [/^sus4$/i,'sus4'],[/^sus$/i,'sus4'],
+    [/^5$/,'5'],
+    [/^m$/,'m'],[/^min$/i,'m'],[/^-$/,'m'],
+    [/^$/,''],[/^maj$/i,''],[/^M$/,'']
+  ];
+  for(const [re, name] of patterns){
+    if(re.test(rest)) return {rootPc, formulaName: name};
+  }
+  return null;
+}
+
+function searchVoicing(rootPc, formulaName){
+  const formulaEntry = FORMULAS.find(f => f[0] === formulaName);
+  if(!formulaEntry) return null;
+  const allowedRel = new Set(formulaEntry[1]);
+  const requiredRel = new Set(REQUIRED_TONES[formulaName] || [0]);
+
+  function tryWindow(lowFret, highFret, allowOpen){
+    const options = [];
+    for(let s=0; s<6; s++){
+      const opts = ['X'];
+      for(let f = (allowOpen ? 0 : lowFret); f <= highFret; f++){
+        const rel = (pitchClass(s,f) - rootPc + 12) % 12;
+        if(allowedRel.has(rel)) opts.push(f);
+      }
+      options.push(opts);
+    }
+    let best = null;
+    const chosen = [];
+    function backtrack(stringIdx, coveredRel){
+      if(stringIdx === 6){
+        if(coveredRel.size === requiredRel.size){
+          const mutedCount = chosen.filter(c => c === 'X').length;
+          const playedCount = 6 - mutedCount;
+          if(playedCount < 3) return;
+          const bassIdx = chosen.findIndex(c => c !== 'X');
+          const bassRel = bassIdx === -1 ? null : (pitchClass(bassIdx, chosen[bassIdx]) - rootPc + 12) % 12;
+          const fretSum = chosen.reduce((a,c) => a + (typeof c === 'number' ? c : 0), 0);
+          const score = mutedCount*2 + fretSum*0.3 + (bassRel === 0 ? 0 : 6);
+          if(best === null || score < best.score){
+            best = {frets: chosen.slice(), score};
+          }
+        }
+        return;
+      }
+      for(const opt of options[stringIdx]){
+        chosen.push(opt);
+        let newCovered = coveredRel;
+        if(opt !== 'X'){
+          const rel = (pitchClass(stringIdx, opt) - rootPc + 12) % 12;
+          if(requiredRel.has(rel) && !coveredRel.has(rel)){
+            newCovered = new Set(coveredRel);
+            newCovered.add(rel);
+          }
+        }
+        backtrack(stringIdx+1, newCovered);
+        chosen.pop();
+      }
+    }
+    backtrack(0, new Set());
+    return best;
+  }
+
+  let result = tryWindow(0, 4, true);
+  if(!result){
+    for(let w = 1; w <= 9 && !result; w++){
+      result = tryWindow(w, w+3, false);
+    }
+  }
+  return result;
+}
   const playedStrings = [];
   for(let s=0; s<6; s++){
     if(typeof selection[s] === 'number'){
@@ -1114,6 +1253,33 @@ document.getElementById('clearHighlightBtn').addEventListener('click', () => {
   highlightSet.clear();
   document.querySelectorAll('.note-toggle').forEach(b => b.classList.remove('active'));
   render();
+});
+
+function handleShowChord(){
+  const statusEl = document.getElementById('chordLookupStatus');
+  const input = document.getElementById('chordNameInput');
+  const parsed = parseChordInput(input.value);
+  if(!parsed){
+    statusEl.textContent = 'Couldn\'t read that — try something like Cmaj7, Am, G7, Dsus4.';
+    statusEl.className = 'chord-lookup-status error';
+    return;
+  }
+  const voicing = searchVoicing(parsed.rootPc, parsed.formulaName);
+  if(!voicing){
+    statusEl.textContent = 'No clean voicing found for that chord in the current tuning.';
+    statusEl.className = 'chord-lookup-status error';
+    return;
+  }
+  selection = voicing.frets;
+  buildBoard();
+  render();
+  statusEl.textContent = 'Showing ' + input.value.trim() + ' on the fretboard.';
+  statusEl.className = 'chord-lookup-status';
+}
+
+document.getElementById('showChordBtn').addEventListener('click', handleShowChord);
+document.getElementById('chordNameInput').addEventListener('keydown', (e) => {
+  if(e.key === 'Enter') handleShowChord();
 });
 
 document.getElementById('exportPdfBtn').addEventListener('click', () => {
