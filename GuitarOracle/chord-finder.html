@@ -587,7 +587,9 @@
 <div class="sub">Click a fret to mark it. Click the X to mute a string. Build a chord, then add it to your progression below.</div>
 
 <div class="key-row">
-  <span>Key:</span>
+  <span>Instrument:</span>
+  <select id="instrumentSelect"></select>
+  <span style="margin-left:14px;">Key:</span>
   <select id="keyRoot"></select>
   <select id="keyMode">
     <option value="major">Major</option>
@@ -663,7 +665,7 @@
 
 <script>
 const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
-const TUNINGS = {
+const GUITAR_TUNINGS = {
   'Standard E':      [4,9,2,7,11,4],
   'Drop D':          [2,9,2,7,11,4],
   'Half-Step Down (Eb)': [3,8,1,6,10,3],
@@ -679,7 +681,16 @@ const TUNINGS = {
   'DADGAD':          [2,9,2,7,9,2],
   'Double Drop D':   [2,9,2,7,11,2]
 };
-let TUNING = TUNINGS['Standard E'].slice(); // low E, A, D, G, B, high e
+const BASS_TUNINGS = {
+  'Standard (E A D G)': [4,9,2,7],
+  'Drop D':             [2,9,2,7],
+  'D Standard':         [2,7,0,5],
+  'Eb Standard':        [3,8,1,6],
+  '5-String (B E A D G)': [11,4,9,2,7]
+};
+let INSTRUMENT = 'guitar';
+function activeTuningDict(){ return INSTRUMENT === 'bass' ? BASS_TUNINGS : GUITAR_TUNINGS; }
+let TUNING = GUITAR_TUNINGS['Standard E'].slice(); // low to high
 const NUM_FRETS = 14;
 
 // [name, intervals from root, quality family]
@@ -743,14 +754,20 @@ const NEXT_SUGGEST = {
   '7': ['1']
 };
 
-let selection = new Array(6).fill(null); // null = untouched, 'X' = muted, number = fret
+let selection = new Array(TUNING.length).fill(null); // null = untouched, 'X' = muted, number = fret
 let progression = []; // {label, degree, tag, scale}
 let flipped = true; // upside-down view: high e on top, low E on bottom
 let highlightSet = new Set(); // pitch classes to highlight everywhere on the board
 
+function populateInstrumentSelect(){
+  const sel = document.getElementById('instrumentSelect');
+  sel.innerHTML = '<option value="guitar">Guitar (6-string)</option><option value="bass">Bass</option>';
+}
+
 function populateTuningSelect(){
   const sel = document.getElementById('tuningSelect');
-  Object.keys(TUNINGS).forEach(name => {
+  sel.innerHTML = '';
+  Object.keys(activeTuningDict()).forEach(name => {
     const opt = document.createElement('option');
     opt.value = name;
     opt.textContent = name;
@@ -762,22 +779,35 @@ function populateTuningSelect(){
   sel.appendChild(customOpt);
 }
 
+function switchInstrument(newInstrument){
+  INSTRUMENT = newInstrument;
+  const dict = activeTuningDict();
+  const firstName = Object.keys(dict)[0];
+  TUNING = dict[firstName].slice();
+  selection = new Array(TUNING.length).fill(null);
+  populateTuningSelect();
+  document.getElementById('tuningSelect').value = firstName;
+  document.getElementById('customTuningRow').style.display = 'none';
+  buildBoard();
+  render();
+}
+
 function buildCustomTuningRow(){
   const row = document.getElementById('customTuningRow');
   row.innerHTML = '';
-  const labels = ['low E','A','D','G','B','high e'];
-  for(let s=0; s<6; s++){
+  const n = TUNING.length;
+  for(let s=0; s<n; s++){
     const sel = document.createElement('select');
     sel.className = 'custom-string-select';
     sel.dataset.string = s;
-    NOTE_NAMES.forEach((n, i) => {
+    NOTE_NAMES.forEach((note, i) => {
       const opt = document.createElement('option');
       opt.value = i;
-      opt.textContent = n;
+      opt.textContent = note;
       if(i === TUNING[s]) opt.selected = true;
       sel.appendChild(opt);
     });
-    sel.title = labels[s] + ' string';
+    sel.title = (s===0 ? 'lowest string' : s===n-1 ? 'highest string' : 'string ' + (s+1));
     sel.addEventListener('change', () => {
       TUNING[s] = parseInt(sel.value);
       buildBoard();
@@ -834,14 +864,15 @@ function buildBoard(){
   }
   table.appendChild(headRow);
 
-  const renderOrder = flipped ? [5,4,3,2,1,0] : [0,1,2,3,4,5];
+  const indices = [...Array(TUNING.length).keys()];
+  const renderOrder = flipped ? indices.slice().reverse() : indices;
   for(const s of renderOrder){
     const row = document.createElement('tr');
     row.id = 'row-' + s;
     const label = document.createElement('td');
     label.className = 'stringlabel';
-    label.textContent = (s === 5) ? noteName(TUNING[s]).toLowerCase() : noteName(TUNING[s]);
-    label.title = (s === 0) ? 'lowest string' : (s === 5) ? 'highest string' : '';
+    label.textContent = (s === TUNING.length-1) ? noteName(TUNING[s]).toLowerCase() : noteName(TUNING[s]);
+    label.title = (s === 0) ? 'lowest string' : (s === TUNING.length-1) ? 'highest string' : '';
     row.appendChild(label);
 
     const muteCell = document.createElement('td');
@@ -915,7 +946,7 @@ function render(){
     dot.textContent = label;
   });
 
-  for(let s=0; s<6; s++){
+  for(let s=0; s<TUNING.length; s++){
     const row = document.getElementById('row-' + s);
     const muted = selection[s] === 'X';
     row.classList.toggle('muted-row', muted);
@@ -1000,7 +1031,7 @@ function computeChord(){
   const fitEl = document.getElementById('fitTag');
 
   const playedStrings = [];
-  for(let s=0; s<6; s++){
+  for(let s=0; s<TUNING.length; s++){
     if(typeof selection[s] === 'number'){
       playedStrings.push({string: s, pc: pitchClass(s, selection[s])});
     }
@@ -1087,8 +1118,9 @@ function searchVoicing(rootPc, formulaName){
   const requiredRel = new Set(REQUIRED_TONES[formulaName] || [0]);
 
   function tryWindow(lowFret, highFret, allowOpen){
+    const N = TUNING.length;
     const options = [];
-    for(let s=0; s<6; s++){
+    for(let s=0; s<N; s++){
       const opts = ['X'];
       for(let f = (allowOpen ? 0 : lowFret); f <= highFret; f++){
         const rel = (pitchClass(s,f) - rootPc + 12) % 12;
@@ -1098,12 +1130,13 @@ function searchVoicing(rootPc, formulaName){
     }
     let best = null;
     const chosen = [];
+    const minPlayed = INSTRUMENT === 'bass' ? 1 : 3;
     function backtrack(stringIdx, coveredRel){
-      if(stringIdx === 6){
+      if(stringIdx === N){
         if(coveredRel.size === requiredRel.size){
           const mutedCount = chosen.filter(c => c === 'X').length;
-          const playedCount = 6 - mutedCount;
-          if(playedCount < 3) return;
+          const playedCount = N - mutedCount;
+          if(playedCount < minPlayed) return;
           const bassIdx = chosen.findIndex(c => c !== 'X');
           const bassRel = bassIdx === -1 ? null : (pitchClass(bassIdx, chosen[bassIdx]) - rootPc + 12) % 12;
           const fretSum = chosen.reduce((a,c) => a + (typeof c === 'number' ? c : 0), 0);
@@ -1143,7 +1176,7 @@ function searchVoicing(rootPc, formulaName){
 
 function currentChordData(){
   const playedStrings = [];
-  for(let s=0; s<6; s++){
+  for(let s=0; s<TUNING.length; s++){
     if(typeof selection[s] === 'number'){
       playedStrings.push({string: s, pc: pitchClass(s, selection[s])});
     }
@@ -1315,7 +1348,7 @@ document.getElementById('addBtn').addEventListener('click', () => {
 });
 
 document.getElementById('clearBoardBtn').addEventListener('click', () => {
-  selection = new Array(6).fill(null);
+  selection = new Array(TUNING.length).fill(null);
   render();
 });
 
@@ -1348,10 +1381,15 @@ document.getElementById('tuningSelect').addEventListener('change', (e) => {
     buildCustomTuningRow();
   } else {
     customRow.style.display = 'none';
-    TUNING = TUNINGS[val].slice();
+    TUNING = activeTuningDict()[val].slice();
+    selection = new Array(TUNING.length).fill(null);
   }
   buildBoard();
   render();
+});
+
+document.getElementById('instrumentSelect').addEventListener('change', (e) => {
+  switchInstrument(e.target.value);
 });
 
 document.getElementById('clearHighlightBtn').addEventListener('click', () => {
@@ -1397,10 +1435,11 @@ document.getElementById('exportPdfBtn').addEventListener('click', () => {
 });
 
 function chordDiagramSVG(frets, tuningPcs){
+  const N = tuningPcs.length;
   const W = 130, H = 165;
   const marginTop = 34, marginBottom = 22, marginLeft = 18, marginRight = 18;
   const numRows = 4;
-  const stringGap = (W - marginLeft - marginRight) / 5;
+  const stringGap = (W - marginLeft - marginRight) / (N - 1);
   const fretGap = (H - marginTop - marginBottom) / numRows;
   const stringX = i => marginLeft + i * stringGap;
   const fretY = row => marginTop + row * fretGap;
@@ -1422,10 +1461,10 @@ function chordDiagramSVG(frets, tuningPcs){
   for(let r = 0; r <= numRows; r++){
     const y = fretY(r);
     const strokeW = (r === 0 && isOpenPosition) ? 3.5 : 1.2;
-    svg += '<line x1="' + stringX(0) + '" y1="' + y + '" x2="' + stringX(5) + '" y2="' + y + '" stroke="#333" stroke-width="' + strokeW + '"/>';
+    svg += '<line x1="' + stringX(0) + '" y1="' + y + '" x2="' + stringX(N-1) + '" y2="' + y + '" stroke="#333" stroke-width="' + strokeW + '"/>';
   }
   // string lines
-  for(let i = 0; i < 6; i++){
+  for(let i = 0; i < N; i++){
     svg += '<line x1="' + stringX(i) + '" y1="' + fretY(0) + '" x2="' + stringX(i) + '" y2="' + fretY(numRows) + '" stroke="#555" stroke-width="1"/>';
   }
   // position label if not open position
@@ -1433,7 +1472,7 @@ function chordDiagramSVG(frets, tuningPcs){
     svg += '<text x="' + (stringX(0) - 12) + '" y="' + (fretY(0) + fretGap*0.5 + 4) + '" font-size="9" fill="#333" text-anchor="end">' + windowStart + 'fr</text>';
   }
   // per-string markers
-  for(let i = 0; i < 6; i++){
+  for(let i = 0; i < N; i++){
     const val = frets[i];
     const x = stringX(i);
     if(val === 'X' || val === null || val === undefined){
@@ -1449,8 +1488,8 @@ function chordDiagramSVG(frets, tuningPcs){
     }
   }
   // open-string note names under diagram
-  for(let i = 0; i < 6; i++){
-    const label = (i === 5) ? noteName(tuningPcs[i]).toLowerCase() : noteName(tuningPcs[i]);
+  for(let i = 0; i < N; i++){
+    const label = (i === N-1) ? noteName(tuningPcs[i]).toLowerCase() : noteName(tuningPcs[i]);
     svg += '<text x="' + stringX(i) + '" y="' + (fretY(numRows) + 13) + '" font-size="8" fill="#777" text-anchor="middle">' + label + '</text>';
   }
 
@@ -1495,6 +1534,7 @@ function buildPrintSummary(){
 
 document.getElementById('saveConfigBtn').addEventListener('click', () => {
   const state = {
+    instrument: INSTRUMENT,
     key: {
       root: parseInt(document.getElementById('keyRoot').value),
       mode: document.getElementById('keyMode').value
@@ -1539,15 +1579,22 @@ document.getElementById('configFileInput').addEventListener('change', (e) => {
 });
 
 function applyLoadedConfig(data){
+  if(data.instrument){
+    INSTRUMENT = data.instrument;
+    document.getElementById('instrumentSelect').value = data.instrument;
+    populateTuningSelect();
+  }
   if(data.key){
     document.getElementById('keyRoot').value = data.key.root;
     document.getElementById('keyMode').value = data.key.mode;
   }
   if(data.tuning){
     TUNING = data.tuning.pcs.slice();
+    selection = new Array(TUNING.length).fill(null);
     const tuningSel = document.getElementById('tuningSelect');
-    const isKnown = Object.keys(TUNINGS).includes(data.tuning.name) &&
-                    JSON.stringify(TUNINGS[data.tuning.name]) === JSON.stringify(data.tuning.pcs);
+    const dict = activeTuningDict();
+    const isKnown = Object.keys(dict).includes(data.tuning.name) &&
+                    JSON.stringify(dict[data.tuning.name]) === JSON.stringify(data.tuning.pcs);
     if(isKnown){
       tuningSel.value = data.tuning.name;
       document.getElementById('customTuningRow').style.display = 'none';
@@ -1575,6 +1622,7 @@ function applyLoadedConfig(data){
   renderProgression();
 }
 
+populateInstrumentSelect();
 populateKeySelect();
 populateTuningSelect();
 populateHighlightPalette();
