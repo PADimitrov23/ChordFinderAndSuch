@@ -572,6 +572,50 @@
     font-size: 0.72rem;
     color: var(--text-dim);
   }
+  .triad-section{ max-width: 760px; }
+  .triad-grid{
+    display:flex;
+    flex-wrap:wrap;
+    gap: 10px;
+    justify-content:center;
+    margin: 6px 0 16px;
+  }
+  .triad-card{
+    background: #efe6d4;
+    color: #2a1d12;
+    border-radius: 10px;
+    padding: 8px 8px 6px;
+    width: 118px;
+    cursor:pointer;
+    border: 2px solid transparent;
+    transition: border-color 0.12s ease, transform 0.12s ease;
+  }
+  .triad-card:hover{ border-color: var(--amber); transform: translateY(-2px); }
+  .triad-card svg{ width:100%; height:auto; display:block; }
+  .triad-inv{
+    font-size: 0.68rem;
+    font-weight:600;
+    text-align:center;
+    margin-top: 2px;
+  }
+  .triad-meta{
+    font-size: 0.62rem;
+    color: #6b5a47;
+    text-align:center;
+  }
+  .triad-empty{ color: var(--text-dim); font-size:0.8rem; }
+  .triad-tips{
+    text-align:left;
+    font-size: 0.78rem;
+    color: var(--text-dim);
+    line-height: 1.5;
+    background: rgba(0,0,0,0.2);
+    border: 1px solid #3a2a1c;
+    border-radius: 10px;
+    padding: 12px 18px;
+  }
+  .triad-tips strong{ color: var(--amber); font-family:'Fraunces', serif; font-size:0.95rem; }
+  .triad-tips ul{ margin: 6px 0 8px; padding-left: 18px; }
   .scale-legend span.deg-chip{
     color: var(--blue);
     font-weight:600;
@@ -661,6 +705,26 @@
     <button class="primary" id="toggleScaleBtn">Show scale on fretboard</button>
   </div>
   <div class="scale-legend" id="scaleLegend"></div>
+</div>
+
+<div class="highlight-section triad-section">
+  <div class="highlight-title">Triad finder</div>
+  <div class="scale-controls">
+    <select id="triadRoot"></select>
+    <select id="triadType"></select>
+    <select id="triadStringSet"></select>
+  </div>
+  <div class="triad-grid" id="triadResults"></div>
+  <div class="triad-tips">
+    <strong>Strokes-style approach</strong>
+    <ul>
+      <li>Stay on the top three strings and keep the shapes tight, high up the neck.</li>
+      <li>Move between inversions of the same triad so the top note changes in small steps, almost like a melody.</li>
+      <li>With two guitars, split them up: one on root-position triads, the other on inversions in a higher spot, so the parts interlock instead of doubling each other.</li>
+      <li>Play them clean and a bit clipped (light palm-muting, tight downstrokes) rather than ringing out.</li>
+    </ul>
+    <em>Click any shape to load it on the fretboard above, then hit "Add to progression".</em>
+  </div>
 </div>
 
 <script>
@@ -904,6 +968,11 @@ function buildBoard(){
       row.appendChild(cell);
     }
     table.appendChild(row);
+  }
+
+  if(document.getElementById('triadResults')){
+    refreshTriadStringSets();
+    renderTriads();
   }
 }
 
@@ -1250,6 +1319,118 @@ function toggleScaleOverlay(){
   render();
 }
 
+const TRIAD_TYPES = {
+  'Major':      {intervals:[0,4,7], suffix:''},
+  'Minor':      {intervals:[0,3,7], suffix:'m'},
+  'Diminished': {intervals:[0,3,6], suffix:'dim'},
+  'Augmented':  {intervals:[0,4,8], suffix:'aug'},
+  'Sus2':       {intervals:[0,2,7], suffix:'sus2'},
+  'Sus4':       {intervals:[0,5,7], suffix:'sus4'}
+};
+const INVERSION_NAMES = ['Root position', '1st inversion', '2nd inversion'];
+
+function populateTriadSelects(){
+  const rootSel = document.getElementById('triadRoot');
+  NOTE_NAMES.forEach((n,i) => {
+    const opt = document.createElement('option');
+    opt.value = i; opt.textContent = n;
+    rootSel.appendChild(opt);
+  });
+  const typeSel = document.getElementById('triadType');
+  Object.keys(TRIAD_TYPES).forEach(name => {
+    const opt = document.createElement('option');
+    opt.value = name; opt.textContent = name;
+    typeSel.appendChild(opt);
+  });
+}
+
+function stringSetLabel(start){
+  const N = TUNING.length;
+  return [start, start+1, start+2].map(s => {
+    const n = noteName(TUNING[s]);
+    return s === N-1 ? n.toLowerCase() : n;
+  }).join(' · ');
+}
+
+function refreshTriadStringSets(){
+  const sel = document.getElementById('triadStringSet');
+  const N = TUNING.length;
+  const prev = sel.value;
+  sel.innerHTML = '';
+  for(let i = N-3; i >= 0; i--){
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = 'Strings ' + stringSetLabel(i) + (i === N-3 ? ' (top three)' : '');
+    sel.appendChild(opt);
+  }
+  const all = document.createElement('option');
+  all.value = 'all';
+  all.textContent = 'All string sets';
+  sel.appendChild(all);
+  const valid = Array.from(sel.options).some(o => o.value === prev);
+  sel.value = valid ? prev : String(N-3);
+}
+
+function findTriads(rootPc, intervals, start){
+  const N = TUNING.length;
+  const required = intervals.map(iv => (rootPc + iv) % 12);
+  const found = [];
+  for(let f0 = 0; f0 <= NUM_FRETS; f0++){
+    for(let f1 = 0; f1 <= NUM_FRETS; f1++){
+      for(let f2 = 0; f2 <= NUM_FRETS; f2++){
+        const fr = [f0, f1, f2];
+        const span = Math.max(...fr) - Math.min(...fr);
+        if(span > 4) continue;
+        const pcs = fr.map((f, k) => pitchClass(start + k, f));
+        if(new Set(pcs).size !== 3) continue;
+        if(!pcs.every(p => required.includes(p))) continue;
+        const bassRel = (pcs[0] - rootPc + 12) % 12;
+        const inv = intervals.indexOf(bassRel);
+        const frets = new Array(N).fill('X');
+        fr.forEach((f, k) => { frets[start + k] = f; });
+        found.push({frets, start, inv, minFret: Math.min(...fr), fr});
+      }
+    }
+  }
+  found.sort((a,b) => a.minFret - b.minFret || a.inv - b.inv);
+  return found;
+}
+
+function renderTriads(){
+  const wrap = document.getElementById('triadResults');
+  if(!wrap) return;
+  const rootPc = parseInt(document.getElementById('triadRoot').value);
+  const typeName = document.getElementById('triadType').value;
+  const type = TRIAD_TYPES[typeName];
+  const setVal = document.getElementById('triadStringSet').value;
+  const N = TUNING.length;
+  const starts = setVal === 'all'
+    ? Array.from({length: N-2}, (_, i) => N-3-i)
+    : [parseInt(setVal)];
+
+  wrap.innerHTML = '';
+  let count = 0;
+  starts.forEach(start => {
+    findTriads(rootPc, type.intervals, start).forEach(t => {
+      const card = document.createElement('div');
+      card.className = 'triad-card';
+      card.innerHTML = chordDiagramSVG(t.frets, TUNING) +
+        '<div class="triad-inv">' + noteName(rootPc) + type.suffix + ' · ' + INVERSION_NAMES[t.inv] + '</div>' +
+        '<div class="triad-meta">' + stringSetLabel(start) + ' · frets ' + t.fr.join('-') + '</div>';
+      card.addEventListener('click', () => {
+        selection = t.frets.slice();
+        render();
+        window.scrollTo({top: 0, behavior: 'smooth'});
+      });
+      wrap.appendChild(card);
+      count++;
+    });
+  });
+  if(count === 0){
+    wrap.innerHTML = '<div class="triad-empty">No shapes found in this range for that string set.</div>';
+  }
+}
+
 function renderProgression(){
   const strip = document.getElementById('progressionStrip');
   const numbersEl = document.getElementById('progressionNumbers');
@@ -1423,6 +1604,10 @@ function handleShowChord(){
 document.getElementById('showChordBtn').addEventListener('click', handleShowChord);
 document.getElementById('chordNameInput').addEventListener('keydown', (e) => {
   if(e.key === 'Enter') handleShowChord();
+});
+
+['triadRoot','triadType','triadStringSet'].forEach(id => {
+  document.getElementById(id).addEventListener('change', renderTriads);
 });
 
 document.getElementById('toggleScaleBtn').addEventListener('click', toggleScaleOverlay);
@@ -1627,6 +1812,7 @@ populateKeySelect();
 populateTuningSelect();
 populateHighlightPalette();
 populateScaleSelects();
+populateTriadSelects();
 buildBoard();
 render();
 renderProgression();
