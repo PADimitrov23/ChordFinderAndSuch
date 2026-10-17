@@ -293,7 +293,7 @@
     padding: 8px 12px;
     text-align:center;
     min-width: 100px;
-    max-width: 140px;
+    max-width: 170px;
     cursor:pointer;
     position:relative;
   }
@@ -303,14 +303,72 @@
     margin-top: 4px;
     line-height: 1.3;
   }
-  .chip:hover{ border-color: var(--red); }
-  .chip:hover::after{
-    content:"remove";
-    position:absolute;
-    bottom:-16px; left:50%; transform:translateX(-50%);
-    font-size:0.6rem;
-    color: var(--red);
+  .chip:hover{ border-color: var(--amber-dim); }
+  .chip.selected{
+    border-color: var(--amber);
+    box-shadow: 0 0 0 1px var(--amber), 0 0 14px rgba(224,163,68,0.25);
   }
+  .chip.playing{
+    background: linear-gradient(180deg, #3a2a14, #2a1d0c);
+    border-color: var(--green);
+  }
+  .chip-x{
+    position:absolute; top:3px; right:7px;
+    font-size: 0.95rem; line-height:1;
+    color: var(--text-dim);
+  }
+  .chip-x:hover{ color: var(--red); }
+  .chip-rhythm{
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 0.72rem;
+    color: var(--amber);
+    margin-top: 6px;
+    letter-spacing: 0.04em;
+  }
+  .chip-rmeta{ font-size: 0.58rem; color: var(--text-dim); margin-top: 2px; }
+  .rhythm-panel{
+    margin-top: 16px;
+    background: linear-gradient(180deg, #1c140d, #140e09);
+    border: 1px solid #3a2a1c;
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .rhythm-head{
+    display:flex; justify-content:space-between; align-items:baseline; gap:8px; flex-wrap:wrap;
+  }
+  .rhythm-title{ font-family:'Fraunces', serif; font-size:1.05rem; }
+  .rhythm-target{ font-size:0.75rem; color: var(--amber); }
+  .rhythm-grid{
+    display:flex; flex-wrap:wrap; justify-content:center; gap:4px; margin: 14px 0 12px;
+  }
+  .rstep-wrap{ display:flex; flex-direction:column; align-items:center; gap:3px; }
+  .rstep-wrap.beat-start{ margin-left: 10px; }
+  .rstep-wrap.beat-start:first-child{ margin-left: 0; }
+  .rstep-label{ font-size:0.68rem; color: var(--text-dim); }
+  .rstep-label.strong{ color: var(--text); font-weight:600; }
+  .rstep{
+    width: 30px; height: 36px; padding:0;
+    border-radius: 7px; font-size: 1.05rem; font-weight:700;
+    background: rgba(0,0,0,0.25); color: var(--text-dim); border: 1px solid #4a3624;
+  }
+  .rstep.D{ background: var(--amber); color:#1c1207; border-color: var(--amber); }
+  .rstep.U{ background: rgba(224,163,68,0.2); color: var(--amber); border-color: var(--amber-dim); }
+  .rstep.X{ background: rgba(194,106,85,0.2); color: var(--red); border-color: var(--red); }
+  .rhythm-controls, .rhythm-play{
+    display:flex; gap:8px; flex-wrap:wrap; justify-content:center; align-items:center; margin-top: 8px;
+  }
+  .rhythm-controls label, .rhythm-play label{
+    font-size:0.78rem; color: var(--text-dim); display:flex; align-items:center; gap:5px;
+  }
+  #tempoInput{
+    width: 62px;
+    background: var(--wood-light); color: var(--text);
+    border: 1px solid #4a3624; border-radius: 6px; padding: 5px 6px;
+    font-family:'Inter',sans-serif; font-size:0.82rem;
+  }
+  .rhythm-status{ text-align:center; font-size:0.75rem; color: var(--text-dim); min-height: 1rem; margin-top: 8px; }
+  .rhythm-status.error{ color: var(--red); }
+  .rhythm-legend{ font-size:0.72rem; color: var(--text-dim); text-align:center; margin-top: 6px; line-height:1.5; }
   .chip-name{
     font-family:'Fraunces', serif;
     font-weight:600;
@@ -431,6 +489,12 @@
       padding: 1px 6px;
     }
     .pd-diagram{ margin: 4px 0; }
+    .pd-rhythm{ margin: 4px 0 6px; }
+    .pd-rhythm pre{
+      font-family: 'Courier New', monospace; font-size: 8.5px; line-height: 1.25;
+      margin: 0 0 2px; color:#222; white-space: pre;
+    }
+    .pd-rhythm .pd-rmeta{ font-family: Arial, sans-serif; font-size: 0.58rem; color:#777; }
     .pd-diagram svg{ width: 100%; height: auto; }
     .pd-tag{
       display:inline-block;
@@ -768,6 +832,40 @@
   <div class="progression-numbers" id="progressionNumbers"></div>
   <div class="progression-strip" id="progressionStrip">
     <div class="empty-note">nothing added yet</div>
+  </div>
+  <div class="rhythm-panel" id="rhythmPanel">
+    <div class="rhythm-head">
+      <span class="rhythm-title">Strumming &amp; rhythm</span>
+      <span class="rhythm-target" id="rhythmTarget"></span>
+    </div>
+    <div class="rhythm-grid" id="rhythmGrid"></div>
+    <div class="rhythm-controls">
+      <select id="rhythmPreset"></select>
+      <select id="rhythmMeter">
+        <option value="4/4">4/4</option>
+        <option value="3/4">3/4</option>
+        <option value="6/8">6/8</option>
+      </select>
+      <select id="rhythmGridSel">
+        <option value="8">8th-note grid</option>
+        <option value="16">16th-note grid</option>
+      </select>
+      <select id="rhythmBars">
+        <option value="0.5">half a bar</option>
+        <option value="1">1 bar</option>
+        <option value="2">2 bars</option>
+        <option value="4">4 bars</option>
+      </select>
+      <label><input type="checkbox" id="rhythmPm"> palm mute</label>
+      <button id="rhythmAllBtn">Apply to all chords</button>
+    </div>
+    <div class="rhythm-play">
+      <button class="primary" id="playBtn">▶ Play</button>
+      <label>Tempo <input type="number" id="tempoInput" min="40" max="240" value="100"> BPM</label>
+      <label><input type="checkbox" id="loopChk"> loop</label>
+    </div>
+    <div class="rhythm-status" id="rhythmStatus"></div>
+    <div class="rhythm-legend">↓ down strum &nbsp;·&nbsp; ↑ up strum &nbsp;·&nbsp; × muted chuck &nbsp;·&nbsp; · rest. Click a step to cycle through them. Click a chord above to give it its own pattern; click it again to go back to the pattern for new chords.</div>
   </div>
   <div class="suggest-row" id="suggestRow"></div>
   <div class="mood-panel" id="moodPanel" style="display:none;">
@@ -1456,6 +1554,354 @@ function toggleScaleOverlay(){
   render();
 }
 
+// ================= Rhythm & strumming =================
+const METERS = {
+  '4/4': {eighths: 8, beats: 4, compound: false},
+  '3/4': {eighths: 6, beats: 3, compound: false},
+  '6/8': {eighths: 6, beats: 2, compound: true}
+};
+// steps are written on the 8th-note grid; 'D' down, 'U' up, 'X' muted chuck, '' rest
+const RHYTHM_PRESETS = [
+  {name:'Straight quarter downs',        meter:'4/4', pm:false, steps:['D','','D','','D','','D','']},
+  {name:'Folk strum (D, DU, UDU)',       meter:'4/4', pm:false, steps:['D','','D','U','','U','D','U']},
+  {name:'Down-up eighths',               meter:'4/4', pm:false, steps:['D','U','D','U','D','U','D','U']},
+  {name:'Palm-muted eighth downs',       meter:'4/4', pm:true,  steps:['D','D','D','D','D','D','D','D']},
+  {name:'Offbeat chop (reggae / ska)',   meter:'4/4', pm:true,  steps:['','D','','D','','D','','D']},
+  {name:'Backbeat chucks (chuck on 2 & 4)', meter:'4/4', pm:false, steps:['D','','X','','D','','X','']},
+  {name:'Slow ballad',                   meter:'4/4', pm:false, steps:['D','','','','D','','U','']},
+  {name:'Waltz (D on each beat)',        meter:'3/4', pm:false, steps:['D','','D','','D','']},
+  {name:'Waltz bass-strum-strum',        meter:'3/4', pm:false, steps:['D','','D','U','D','U']},
+  {name:'Two big beats (1 and 4)',       meter:'6/8', pm:false, steps:['D','','','D','','']},
+  {name:'Rolling six (D U D D U D)',     meter:'6/8', pm:false, steps:['D','U','D','D','U','D']}
+];
+const DEFAULT_PRESET_NAME = {'4/4':'Folk strum (D, DU, UDU)', '3/4':'Waltz (D on each beat)', '6/8':'Two big beats (1 and 4)'};
+const GLYPH = {D:'↓', U:'↑', X:'×', '':'·'};
+const PLAIN = {D:'D', U:'U', X:'x', '':'.'};
+const NEXT_STEP = {'':'D', D:'U', U:'X', X:''};
+
+let tempo = 100;
+let selectedIdx = null; // index of the chord being edited, or null = "new chords" pattern
+
+function stepsPerBar(meter, grid){ return METERS[meter].eighths * (grid === 16 ? 2 : 1); }
+
+function convertSteps(steps, toLen){
+  const L = steps.length;
+  if(L === toLen) return steps.slice();
+  const out = new Array(toLen).fill('');
+  if(toLen === L * 2){ steps.forEach((v, i) => { out[i * 2] = v; }); }
+  else if(L === toLen * 2){ for(let i = 0; i < toLen; i++) out[i] = steps[i * 2]; }
+  return out;
+}
+
+function presetSteps(p, grid){
+  return grid === 16 ? convertSteps(p.steps, p.steps.length * 2) : p.steps.slice();
+}
+
+function defaultRhythm(meter, grid){
+  const p = RHYTHM_PRESETS.find(x => x.name === DEFAULT_PRESET_NAME[meter]);
+  return {meter: meter, grid: grid, steps: presetSteps(p, grid), bars: 1, pm: p.pm};
+}
+
+let newRhythm = defaultRhythm('4/4', 8);
+
+function sanitizeRhythm(r){
+  if(!r || typeof r !== 'object') return null;
+  const meter = METERS[r.meter] ? r.meter : '4/4';
+  const grid = r.grid === 16 ? 16 : 8;
+  const n = stepsPerBar(meter, grid);
+  const steps = new Array(n).fill('');
+  if(Array.isArray(r.steps)) r.steps.slice(0, n).forEach((v, i) => { steps[i] = (v === 'D' || v === 'U' || v === 'X') ? v : ''; });
+  const bars = [0.5, 1, 2, 4].includes(r.bars) ? r.bars : 1;
+  return {meter: meter, grid: grid, steps: steps, bars: bars, pm: !!r.pm};
+}
+
+function stepLabels(meter, grid){
+  const out = [];
+  const m = METERS[meter];
+  if(m.compound){
+    for(let i = 0; i < m.eighths; i++){
+      out.push({text: String(i + 1), strong: i % 3 === 0});
+      if(grid === 16) out.push({text: '·', strong: false});
+    }
+  } else {
+    for(let b = 1; b <= m.beats; b++){
+      if(grid === 16) out.push({text: String(b), strong: true}, {text: 'e', strong: false}, {text: '&', strong: false}, {text: 'a', strong: false});
+      else out.push({text: String(b), strong: true}, {text: '&', strong: false});
+    }
+  }
+  return out;
+}
+
+// counts + arrows as aligned text lines, split into chunks so they stay narrow
+function rhythmBlocks(r, plain){
+  const labels = stepLabels(r.meter, r.grid);
+  const map = plain ? PLAIN : GLYPH;
+  const size = (r.steps.length % 8 === 0) ? 8 : 6;
+  const blocks = [];
+  for(let i = 0; i < r.steps.length; i += size){
+    blocks.push({
+      counts: labels.slice(i, i + size).map(l => l.text).join(' '),
+      arrows: r.steps.slice(i, i + size).map(v => map[v]).join(' ')
+    });
+  }
+  return blocks;
+}
+
+function rhythmGlyphLine(r){ return r.steps.map(v => GLYPH[v]).join(' '); }
+function rhythmMeta(r){
+  return r.meter + ' · ' + (r.grid === 16 ? '16ths' : '8ths') + ' · ' + (r.bars === 1 ? '1 bar' : r.bars + ' bars') + (r.pm ? ' · palm-muted' : '');
+}
+
+function activeRhythm(){
+  if(selectedIdx !== null && progression[selectedIdx]){
+    const c = progression[selectedIdx];
+    if(!c.rhythm) c.rhythm = JSON.parse(JSON.stringify(newRhythm));
+    return c.rhythm;
+  }
+  return newRhythm;
+}
+
+function renderRhythmEditor(){
+  if(selectedIdx !== null && !progression[selectedIdx]) selectedIdx = null;
+  const r = activeRhythm();
+  document.getElementById('rhythmTarget').textContent = selectedIdx === null
+    ? 'Editing: pattern for new chords'
+    : 'Editing: ' + progression[selectedIdx].label + ' (chord ' + (selectedIdx + 1) + ')';
+  document.getElementById('rhythmMeter').value = r.meter;
+  document.getElementById('rhythmGridSel').value = String(r.grid);
+  document.getElementById('rhythmBars').value = String(r.bars);
+  document.getElementById('rhythmPm').checked = r.pm;
+
+  const ps = document.getElementById('rhythmPreset');
+  ps.innerHTML = '';
+  const first = document.createElement('option');
+  first.value = ''; first.textContent = 'Presets…';
+  ps.appendChild(first);
+  RHYTHM_PRESETS.filter(p => p.meter === r.meter).forEach(p => {
+    const o = document.createElement('option');
+    o.value = p.name; o.textContent = p.name;
+    ps.appendChild(o);
+  });
+
+  const grid = document.getElementById('rhythmGrid');
+  grid.innerHTML = '';
+  const labels = stepLabels(r.meter, r.grid);
+  r.steps.forEach((v, i) => {
+    const wrap = mk('div', 'rstep-wrap' + (labels[i].strong ? ' beat-start' : ''));
+    wrap.appendChild(mk('div', 'rstep-label' + (labels[i].strong ? ' strong' : ''), labels[i].text));
+    const btn = mk('button', 'rstep' + (v ? ' ' + v : ''), GLYPH[v]);
+    btn.title = 'Click to cycle: down, up, muted chuck, rest';
+    btn.addEventListener('click', () => {
+      r.steps[i] = NEXT_STEP[r.steps[i]];
+      renderRhythmEditor();
+      renderProgression();
+    });
+    wrap.appendChild(btn);
+    grid.appendChild(wrap);
+  });
+}
+
+function setRhythmStatus(msg, isErr){
+  const el = document.getElementById('rhythmStatus');
+  el.textContent = msg;
+  el.className = 'rhythm-status' + (isErr ? ' error' : '');
+}
+
+function afterRhythmChange(){
+  renderRhythmEditor();
+  renderProgression();
+}
+
+document.getElementById('rhythmPreset').addEventListener('change', (e) => {
+  const p = RHYTHM_PRESETS.find(x => x.name === e.target.value);
+  if(!p) return;
+  const r = activeRhythm();
+  r.steps = presetSteps(p, r.grid);
+  r.pm = p.pm;
+  afterRhythmChange();
+});
+document.getElementById('rhythmMeter').addEventListener('change', (e) => {
+  const r = activeRhythm();
+  const d = defaultRhythm(e.target.value, r.grid);
+  r.meter = d.meter; r.steps = d.steps; r.pm = d.pm;
+  afterRhythmChange();
+});
+document.getElementById('rhythmGridSel').addEventListener('change', (e) => {
+  const r = activeRhythm();
+  r.grid = parseInt(e.target.value) === 16 ? 16 : 8;
+  r.steps = convertSteps(r.steps, stepsPerBar(r.meter, r.grid));
+  afterRhythmChange();
+});
+document.getElementById('rhythmBars').addEventListener('change', (e) => {
+  activeRhythm().bars = parseFloat(e.target.value);
+  afterRhythmChange();
+});
+document.getElementById('rhythmPm').addEventListener('change', (e) => {
+  activeRhythm().pm = e.target.checked;
+  afterRhythmChange();
+});
+document.getElementById('rhythmAllBtn').addEventListener('click', () => {
+  const r = activeRhythm();
+  progression.forEach(c => { c.rhythm = JSON.parse(JSON.stringify(r)); });
+  newRhythm = JSON.parse(JSON.stringify(r));
+  afterRhythmChange();
+  setRhythmStatus(progression.length ? 'Applied this pattern to every chord.' : 'This pattern will be used for new chords.');
+});
+document.getElementById('tempoInput').addEventListener('change', (e) => {
+  const v = Math.round(parseFloat(e.target.value));
+  tempo = Number.isFinite(v) ? Math.min(240, Math.max(40, v)) : 100;
+  e.target.value = tempo;
+});
+
+// ----- playback (preview only: simple synthesized strums) -----
+let audioCtx = null;
+let playing = false;
+let playTimers = [];
+let playMasters = [];
+
+function stringMidis(tuning){
+  const lowMin = tuning.length <= 5 ? 23 : 36;
+  const out = [];
+  let m = lowMin;
+  while(m % 12 !== tuning[0]) m++;
+  out.push(m);
+  for(let i = 1; i < tuning.length; i++){
+    let n = out[i - 1] + 1;
+    while(n % 12 !== tuning[i]) n++;
+    out.push(n);
+  }
+  return out;
+}
+
+function buildPlan(){
+  const eighth = 30 / tempo;
+  let t = 0;
+  const chords = [];
+  progression.forEach((c, idx) => {
+    const r = sanitizeRhythm(c.rhythm || newRhythm);
+    const n = r.steps.length;
+    const stepDur = eighth * (r.grid === 16 ? 0.5 : 1);
+    const total = Math.max(1, Math.round(r.bars * n));
+    const hits = [];
+    for(let k = 0; k < total; k++){
+      const v = r.steps[k % n];
+      if(v) hits.push({time: k * stepDur, dir: v});
+    }
+    let midis = [];
+    if(c.frets && c.tuning){
+      const base = stringMidis(c.tuning);
+      c.frets.forEach((f, s) => { if(typeof f === 'number') midis.push(base[s] + f); });
+    }
+    chords.push({idx: idx, start: t, hits: hits, midis: midis, pm: r.pm});
+    t += total * stepDur;
+  });
+  return {chords: chords, total: t};
+}
+
+function scheduleHit(ctx, master, when, midis, dir, pm){
+  if(dir === 'X'){
+    const len = Math.floor(ctx.sampleRate * 0.06);
+    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for(let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass'; bp.frequency.value = 1500;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, when);
+    g.gain.exponentialRampToValueAtTime(0.25, when + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.0001, when + 0.05);
+    src.connect(bp); bp.connect(g); g.connect(master);
+    src.start(when);
+    return;
+  }
+  if(midis.length === 0) return;
+  const order = dir === 'U' ? midis.slice().reverse() : midis;
+  const peak = 0.26 / Math.sqrt(order.length);
+  const dur = pm ? 0.2 : 1.2;
+  order.forEach((midi, k) => {
+    const t0 = when + k * 0.014;
+    const osc = ctx.createOscillator();
+    osc.type = 'triangle';
+    osc.frequency.value = 440 * Math.pow(2, (midi - 69) / 12);
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.setValueAtTime(3200, t0);
+    lp.frequency.exponentialRampToValueAtTime(700, t0 + dur * 0.6);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(peak, t0 + 0.006);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    osc.connect(lp); lp.connect(g); g.connect(master);
+    osc.start(t0);
+    osc.stop(t0 + dur + 0.05);
+  });
+}
+
+function highlightChip(idx){
+  document.querySelectorAll('#progressionStrip .chip').forEach((c, i) => c.classList.toggle('playing', i === idx));
+}
+
+function runOnce(base){
+  const plan = buildPlan();
+  const master = audioCtx.createGain();
+  master.gain.value = 0.9;
+  master.connect(audioCtx.destination);
+  playMasters.push(master);
+  plan.chords.forEach(ch => {
+    ch.hits.forEach(h => scheduleHit(audioCtx, master, base + ch.start + h.time, ch.midis, h.dir, ch.pm));
+    playTimers.push(setTimeout(() => { if(playing) highlightChip(ch.idx); }, Math.max(0, (base + ch.start - audioCtx.currentTime) * 1000)));
+  });
+  const endAt = base + plan.total;
+  playTimers.push(setTimeout(() => {
+    if(!playing) return;
+    if(document.getElementById('loopChk').checked){
+      runOnce(endAt);
+    } else {
+      playTimers.push(setTimeout(stopPlayback, 1000));
+    }
+  }, Math.max(0, (endAt - audioCtx.currentTime) * 1000 - 80)));
+}
+
+function startPlayback(){
+  if(progression.length === 0){ setRhythmStatus('Add some chords to the progression first.', true); return; }
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  if(!Ctx){ setRhythmStatus('This browser has no audio support for the preview.', true); return; }
+  try{
+    if(!audioCtx) audioCtx = new Ctx();
+    if(audioCtx.state === 'suspended') audioCtx.resume();
+    playing = true;
+    document.getElementById('playBtn').textContent = '■ Stop';
+    setRhythmStatus('');
+    runOnce(audioCtx.currentTime + 0.12);
+  }catch(e){
+    playing = false;
+    document.getElementById('playBtn').textContent = '▶ Play';
+    setRhythmStatus('Could not start audio in this browser.', true);
+  }
+}
+
+function stopPlayback(){
+  playing = false;
+  playTimers.forEach(clearTimeout);
+  playTimers = [];
+  playMasters.forEach(m => {
+    try{
+      m.gain.cancelScheduledValues(0);
+      m.gain.setTargetAtTime(0, audioCtx.currentTime, 0.015);
+      setTimeout(() => { try{ m.disconnect(); }catch(e){} }, 250);
+    }catch(e){}
+  });
+  playMasters = [];
+  document.getElementById('playBtn').textContent = '▶ Play';
+  document.querySelectorAll('#progressionStrip .chip').forEach(c => c.classList.remove('playing'));
+}
+
+document.getElementById('playBtn').addEventListener('click', () => {
+  if(playing) stopPlayback(); else startPlayback();
+});
+
 // ================= Songbook =================
 const SB_KEY = 'chordFinderSongbook_v1';
 let songbook = [];
@@ -1478,6 +1924,7 @@ function sanitizeChord(c){
     quality: cleanStr(c.quality, 12)
   };
   if(!out.label) return null;
+  out.rhythm = c.rhythm ? sanitizeRhythm(c.rhythm) : null;
   if(Array.isArray(c.frets) && Array.isArray(c.tuning) &&
      c.frets.length === c.tuning.length && c.tuning.length >= 3 && c.tuning.length <= 8 &&
      c.tuning.every(n => Number.isInteger(n) && n >= 0 && n < 12)){
@@ -1509,6 +1956,7 @@ function sanitizeIdea(i, fresh){
         name: String(s.name == null ? 'Section' : s.name).slice(0, 40),
         note: String(s.note == null ? '' : s.note).slice(0, 500),
         key: sanitizeKey(s.key),
+        bpm: (Number.isFinite(s.bpm) && s.bpm >= 30 && s.bpm <= 300) ? Math.round(s.bpm) : null,
         progression: (Array.isArray(s.progression) ? s.progression : []).slice(0, 64).map(sanitizeChord).filter(Boolean)
       });
     });
@@ -1595,6 +2043,7 @@ function renderSongbook(){
       if(progression.length === 0){ setSbStatus('Your progression on the Fretboard tab is empty, nothing to update from.', true); return; }
       s.progression = JSON.parse(JSON.stringify(progression)).map(sanitizeChord).filter(Boolean);
       s.key = {root: parseInt(document.getElementById('keyRoot').value), mode: document.getElementById('keyMode').value};
+      s.bpm = tempo;
       saveSongbook(); renderSongbook(); setSbStatus('Updated "' + s.name + '" from your current progression.');
     });
     addBtn('↑', () => { if(si > 0){ [idea.sections[si-1], idea.sections[si]] = [idea.sections[si], idea.sections[si-1]]; saveSongbook(); renderSongbook(); } });
@@ -1608,6 +2057,7 @@ function renderSongbook(){
       const chip = mk('div', 'sb-chip');
       chip.appendChild(mk('b', '', c.label));
       chip.appendChild(mk('small', '', c.degree + (c.tag === 'borrowed' ? ' · borrowed' : '')));
+      if(c.rhythm) chip.appendChild(mk('small', '', rhythmGlyphLine(c.rhythm)));
       chips.appendChild(chip);
     });
     card.appendChild(chips);
@@ -1630,7 +2080,13 @@ function loadSectionIntoProgression(s){
     document.getElementById('keyMode').value = s.key.mode;
     computeChord();
   }
+  if(s.bpm){
+    tempo = s.bpm;
+    document.getElementById('tempoInput').value = tempo;
+  }
+  selectedIdx = null;
   renderProgression();
+  renderRhythmEditor();
   showTab('fretboard');
   const target = document.querySelector('.progression-section');
   if(target) target.scrollIntoView({behavior: 'smooth'});
@@ -1686,6 +2142,26 @@ function asciiTab(chords){
   return blocks.join('\n\n');
 }
 
+function rhythmTextLines(prog){
+  const withR = prog.filter(c => c.rhythm);
+  if(!withR.length) return [];
+  const out = [];
+  const describe = r => r.meter + ', ' + (r.grid === 16 ? '16ths' : '8ths') + ', ' + (r.bars === 1 ? '1 bar' : r.bars + ' bars') + (r.pm ? ', palm-muted' : '');
+  const same = withR.length === prog.length && withR.every(c => JSON.stringify(c.rhythm) === JSON.stringify(withR[0].rhythm));
+  out.push('');
+  if(same){
+    out.push('Strum (' + describe(withR[0].rhythm) + ', every chord):');
+    rhythmBlocks(withR[0].rhythm, true).forEach(b => { out.push('  ' + b.counts); out.push('  ' + b.arrows); });
+  } else {
+    out.push('Strum (D = down, U = up, x = muted chuck, . = rest):');
+    withR.forEach(c => {
+      out.push('  ' + c.label + '  (' + describe(c.rhythm) + ')');
+      rhythmBlocks(c.rhythm, true).forEach(b => { out.push('    ' + b.counts); out.push('    ' + b.arrows); });
+    });
+  }
+  return out;
+}
+
 function ideaToText(idea){
   const out = [];
   const title = idea.title || 'Untitled idea';
@@ -1694,10 +2170,14 @@ function ideaToText(idea){
   if(idea.notes.trim()){ out.push(''); out.push(idea.notes.trim()); }
   idea.sections.forEach(s => {
     out.push('');
-    out.push('[' + s.name + ']' + (s.key ? '  (key: ' + keyLabelOf(s.key) + ')' : ''));
+    const meta = [];
+    if(s.key) meta.push('key: ' + keyLabelOf(s.key));
+    if(s.bpm) meta.push(s.bpm + ' BPM');
+    out.push('[' + s.name + ']' + (meta.length ? '  (' + meta.join(', ') + ')' : ''));
     if(s.progression.length){
       out.push('Chords:  ' + s.progression.map(c => c.label).join(' | '));
       out.push('Numbers: ' + s.progression.map(c => c.degree).join(' - '));
+      rhythmTextLines(s.progression).forEach(l => out.push(l));
       const tab = asciiTab(s.progression);
       if(tab){ out.push(''); out.push(tab); }
     }
@@ -1802,6 +2282,7 @@ document.getElementById('sbAddSectionBtn').addEventListener('click', () => {
   idea.sections.push({
     name: name,
     note: '',
+    bpm: tempo,
     key: {root: parseInt(document.getElementById('keyRoot').value), mode: document.getElementById('keyMode').value},
     progression: JSON.parse(JSON.stringify(progression)).map(sanitizeChord).filter(Boolean)
   });
@@ -1982,14 +2463,30 @@ function renderProgression(){
 
   progression.forEach((chord, idx) => {
     const chip = document.createElement('div');
-    chip.className = 'chip';
+    chip.className = 'chip' + (idx === selectedIdx ? ' selected' : '');
     chip.innerHTML = '<div class="chip-name">' + chord.label + '</div>' +
                       '<div class="chip-degree">' + chord.degree + '</div>' +
                       '<div class="chip-tag ' + chord.tag + '">' + (chord.tag === 'diatonic' ? 'in key' : chord.tag === 'borrowed' ? 'borrowed' : 'flexible') + '</div>' +
                       '<div class="chip-scale">' + chord.scale + '</div>';
-    chip.addEventListener('click', () => {
+    if(chord.rhythm){
+      chip.appendChild(mk('div', 'chip-rhythm', rhythmGlyphLine(chord.rhythm)));
+      chip.appendChild(mk('div', 'chip-rmeta', rhythmMeta(chord.rhythm)));
+    }
+    const x = mk('span', 'chip-x', '×');
+    x.title = 'Remove this chord';
+    x.addEventListener('click', (e) => {
+      e.stopPropagation();
       progression.splice(idx, 1);
+      if(selectedIdx === idx) selectedIdx = null;
+      else if(selectedIdx !== null && selectedIdx > idx) selectedIdx--;
       renderProgression();
+      renderRhythmEditor();
+    });
+    chip.appendChild(x);
+    chip.addEventListener('click', () => {
+      selectedIdx = (selectedIdx === idx) ? null : idx;
+      renderProgression();
+      renderRhythmEditor();
     });
     strip.appendChild(chip);
   });
@@ -2059,6 +2556,7 @@ function renderMood(){
 document.getElementById('addBtn').addEventListener('click', () => {
   const data = currentChordData();
   if(data === null) return;
+  data.rhythm = JSON.parse(JSON.stringify(newRhythm));
   progression.push(data);
   renderProgression();
 });
@@ -2083,7 +2581,9 @@ function updateOrientHint(){
 
 document.getElementById('clearProgBtn').addEventListener('click', () => {
   progression = [];
+  selectedIdx = null;
   renderProgression();
+  renderRhythmEditor();
 });
 
 document.getElementById('keyRoot').addEventListener('change', () => { computeChord(); });
@@ -2217,6 +2717,12 @@ function chordDiagramSVG(frets, tuningPcs){
   return svg;
 }
 
+function pdfRhythmHtml(c){
+  if(!c.rhythm) return '';
+  const blocks = rhythmBlocks(c.rhythm, false).map(b => '<pre>' + b.counts + '\n' + b.arrows + '</pre>').join('');
+  return '<div class="pd-rhythm">' + blocks + '<div class="pd-rmeta">' + rhythmMeta(c.rhythm) + '</div></div>';
+}
+
 function buildPrintSummary(){
   const keyRoot = document.getElementById('keyRoot').value;
   const keyMode = document.getElementById('keyMode').value;
@@ -2232,6 +2738,7 @@ function buildPrintSummary(){
     cards += '<div class="pd-card">' +
       '<div class="pd-card-head"><span class="pd-name">' + c.label + '</span><span class="pd-degree">' + c.degree + '</span></div>' +
       '<div class="pd-diagram">' + diagram + '</div>' +
+      pdfRhythmHtml(c) +
       '<div class="pd-tag ' + tagClass + '">' + tagText + '</div>' +
       '<div class="pd-scale">' + c.scale + '</div>' +
     '</div>';
@@ -2246,7 +2753,7 @@ function buildPrintSummary(){
   document.getElementById('printSummary').innerHTML =
     '<div class="pd-header">' +
       '<h1>Chord Progression</h1>' +
-      '<div class="pd-meta"><span><strong>Key:</strong> ' + keyLabel + '</span><span><strong>Tuning:</strong> ' + tuningLabel + '</span><span><strong>Numbers:</strong> ' + numbersLine + '</span></div>' +
+      '<div class="pd-meta"><span><strong>Key:</strong> ' + keyLabel + '</span><span><strong>Tuning:</strong> ' + tuningLabel + '</span><span><strong>Numbers:</strong> ' + numbersLine + '</span><span><strong>Tempo:</strong> ' + tempo + ' BPM</span></div>' +
     '</div>' +
     '<div class="pd-grid">' + cards + '</div>' +
     (moodLabel ? '<div class="pd-mood"><h2>' + moodLabel + '</h2><p>' + moodTip + '</p></div>' : '');
@@ -2266,6 +2773,7 @@ document.getElementById('saveConfigBtn').addEventListener('click', () => {
     flipped: flipped,
     highlights: Array.from(highlightSet),
     progression: progression,
+    tempo: tempo,
     songbook: {ideas: songbook, active: activeIdeaId}
   };
   const blob = new Blob([JSON.stringify(state, null, 2)], {type: 'application/json'});
@@ -2337,6 +2845,11 @@ function applyLoadedConfig(data){
   }
   if(Array.isArray(data.progression)){
     progression = data.progression.map(sanitizeChord).filter(Boolean);
+    selectedIdx = null;
+  }
+  if(Number.isFinite(data.tempo)){
+    tempo = Math.min(240, Math.max(40, Math.round(data.tempo)));
+    document.getElementById('tempoInput').value = tempo;
   }
   if(data.songbook && Array.isArray(data.songbook.ideas)){
     songbook = data.songbook.ideas.map(i => sanitizeIdea(i, false)).filter(Boolean);
@@ -2347,6 +2860,7 @@ function applyLoadedConfig(data){
   buildBoard();
   render();
   renderProgression();
+  renderRhythmEditor();
 }
 
 populateInstrumentSelect();
@@ -2361,6 +2875,7 @@ render();
 renderProgression();
 updateOrientHint();
 renderSongbook();
+renderRhythmEditor();
 </script>
 </body>
 </html>
