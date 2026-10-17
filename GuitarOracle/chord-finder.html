@@ -572,6 +572,93 @@
     font-size: 0.72rem;
     color: var(--text-dim);
   }
+  #tabFretboard{
+    width:100%;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+  }
+  .tab-bar{
+    display:flex;
+    gap: 6px;
+    margin-bottom: 22px;
+    background: rgba(0,0,0,0.25);
+    border: 1px solid #3a2a1c;
+    border-radius: 12px;
+    padding: 4px;
+  }
+  .tab-btn{
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    padding: 8px 22px;
+    border-radius: 9px;
+    font-weight:600;
+  }
+  .tab-btn:hover{ background: rgba(255,255,255,0.05); }
+  .tab-btn.active{
+    background: var(--amber);
+    color: #1c1207;
+  }
+  #tabSongbook{ width:100%; display:flex; justify-content:center; }
+  .sb-wrap{ width:100%; max-width: 680px; }
+  .sb-top{
+    display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-bottom: 18px;
+  }
+  .sb-top select{ min-width: 220px; }
+  .sb-title, .sb-notes, .sb-output, .sb-section-note{
+    width:100%;
+    background: var(--wood-light);
+    color: var(--text);
+    border: 1px solid #4a3624;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-family:'Inter',sans-serif;
+    font-size:0.85rem;
+    resize: vertical;
+  }
+  .sb-title{
+    font-family:'Fraunces', serif;
+    font-size:1.2rem;
+    font-weight:600;
+    margin-bottom: 10px;
+  }
+  .sb-notes{ margin-bottom: 6px; line-height:1.5; }
+  .sb-output{ font-family: ui-monospace, Menlo, Consolas, monospace; font-size:0.74rem; margin-top: 8px; white-space: pre; }
+  .sb-subtitle{
+    font-family:'Fraunces', serif;
+    font-size:1.05rem;
+    margin: 22px 0 10px;
+    text-align:center;
+  }
+  .sb-sections{ display:flex; flex-direction:column; gap:10px; }
+  .sb-section{
+    background: linear-gradient(180deg, #1c140d, #140e09);
+    border: 1px solid #3a2a1c;
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+  .sb-section-head{
+    display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom: 8px;
+  }
+  .sb-section-name{
+    font-family:'Fraunces', serif; font-weight:600; color: var(--amber); font-size:1rem;
+  }
+  .sb-section-btns{ display:flex; gap:6px; flex-wrap:wrap; }
+  .sb-section-btns button{ padding: 5px 10px; font-size:0.72rem; }
+  .sb-chips{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom: 8px; }
+  .sb-chip{
+    border: 1px solid #4a3624; border-radius: 7px; padding: 4px 9px; font-size:0.78rem; text-align:center;
+  }
+  .sb-chip b{ color: var(--amber); font-family:'Fraunces', serif; }
+  .sb-chip small{ display:block; color: var(--text-dim); font-size:0.64rem; }
+  .sb-section-note{ padding: 7px 10px; font-size:0.78rem; }
+  .sb-add-row, .sb-share-row{
+    display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top: 12px;
+  }
+  .sb-status{ text-align:center; font-size:0.76rem; color: var(--text-dim); min-height:1rem; margin-top:8px; }
+  .sb-status.error{ color: var(--red); }
+  .sb-empty{ text-align:center; color: var(--text-dim); font-size:0.85rem; padding: 30px 0; }
   .triad-section{ max-width: 760px; }
   .triad-grid{
     display:flex;
@@ -630,6 +717,13 @@
 <h1>Chord Finder</h1>
 <div class="sub">Click a fret to mark it. Click the X to mute a string. Build a chord, then add it to your progression below.</div>
 
+<div class="tab-bar">
+  <button class="tab-btn active" id="tabBtnFretboard" data-tab="fretboard">Fretboard</button>
+  <button class="tab-btn" id="tabBtnSongbook" data-tab="songbook">Songbook</button>
+</div>
+
+<div id="tabFretboard">
+
 <div class="key-row">
   <span>Instrument:</span>
   <select id="instrumentSelect"></select>
@@ -682,14 +776,13 @@
   </div>
   <div class="controls">
     <button id="clearProgBtn">Clear progression</button>
+    <button id="sendToSongbookBtn">Send to songbook</button>
     <button id="exportPdfBtn">Export as PDF</button>
     <button id="saveConfigBtn">Save config</button>
     <button id="loadConfigBtn">Load config</button>
     <input type="file" id="configFileInput" accept=".json" style="display:none;">
   </div>
 </div>
-
-<div id="printSummary"></div>
 
 <div class="highlight-section">
   <div class="highlight-title">Highlight notes on the board</div>
@@ -726,6 +819,50 @@
     <em>Click any shape to load it on the fretboard above, then hit "Add to progression".</em>
   </div>
 </div>
+
+</div><!-- /tabFretboard -->
+
+<div id="tabSongbook" style="display:none;">
+  <div class="sb-wrap">
+    <div class="sb-top">
+      <select id="sbIdeaSelect"></select>
+      <button class="primary" id="sbNewBtn">New idea</button>
+      <button id="sbDeleteBtn">Delete idea</button>
+    </div>
+
+    <div id="sbEditor">
+      <input type="text" id="sbTitle" class="sb-title" placeholder="Song / idea title">
+      <textarea id="sbNotes" class="sb-notes" rows="5" placeholder="Scratch pad: lyrics, melody ideas, feel, references, anything..."></textarea>
+
+      <div class="sb-subtitle">Sections</div>
+      <div id="sbSections" class="sb-sections"></div>
+
+      <div class="sb-add-row">
+        <select id="sbSectionName">
+          <option>Intro</option><option selected>Verse</option><option>Pre-chorus</option>
+          <option>Chorus</option><option>Bridge</option><option>Solo</option><option>Outro</option><option>Other</option>
+        </select>
+        <button class="primary" id="sbAddSectionBtn">+ Add current progression as section</button>
+      </div>
+      <div class="sb-status" id="sbStatus"></div>
+
+      <div class="sb-subtitle">Share with friends</div>
+      <div class="sb-share-row">
+        <button id="sbCopyTextBtn">Copy as text + tab</button>
+        <button id="sbDownloadTxtBtn">Download .txt</button>
+        <button id="sbShareCodeBtn">Make share code</button>
+      </div>
+      <textarea id="sbOutput" class="sb-output" rows="6" readonly placeholder="Text or share code appears here so you can copy it into a message."></textarea>
+
+      <div class="sb-subtitle">Got a code from a friend?</div>
+      <textarea id="sbImportBox" class="sb-output" rows="3" placeholder="Paste a share code here (starts with CF1:)"></textarea>
+      <div class="sb-share-row"><button id="sbImportBtn">Import idea</button></div>
+    </div>
+    <div id="sbEmpty" class="sb-empty">No ideas yet. Hit "New idea" to start one.</div>
+  </div>
+</div>
+
+<div id="printSummary"></div>
 
 <script>
 const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -1319,6 +1456,404 @@ function toggleScaleOverlay(){
   render();
 }
 
+// ================= Songbook =================
+const SB_KEY = 'chordFinderSongbook_v1';
+let songbook = [];
+let activeIdeaId = null;
+
+function uid(){ return 'i' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function cleanStr(v, max){ return String(v == null ? '' : v).replace(/[<>&"'`]/g, '').slice(0, max || 200); }
+
+// Anything that may later go through innerHTML (chord labels etc.) is scrubbed here,
+// so ideas pasted in from a friend can't inject markup.
+function sanitizeChord(c){
+  if(!c || typeof c !== 'object') return null;
+  const tag = ['diatonic','borrowed','flexible'].includes(c.tag) ? c.tag : 'flexible';
+  const out = {
+    label: cleanStr(c.label, 24),
+    degree: cleanStr(c.degree, 6),
+    tag: tag,
+    tagText: cleanStr(c.tagText, 120),
+    scale: cleanStr(c.scale, 160),
+    quality: cleanStr(c.quality, 12)
+  };
+  if(!out.label) return null;
+  if(Array.isArray(c.frets) && Array.isArray(c.tuning) &&
+     c.frets.length === c.tuning.length && c.tuning.length >= 3 && c.tuning.length <= 8 &&
+     c.tuning.every(n => Number.isInteger(n) && n >= 0 && n < 12)){
+    out.frets = c.frets.map(f => (f === 'X' || f === null) ? f : ((Number.isInteger(f) && f >= 0 && f <= 24) ? f : 'X'));
+    out.tuning = c.tuning.slice();
+  }
+  return out;
+}
+
+function sanitizeKey(k){
+  if(k && Number.isInteger(k.root) && k.root >= 0 && k.root < 12 && (k.mode === 'major' || k.mode === 'minor')){
+    return {root: k.root, mode: k.mode};
+  }
+  return null;
+}
+
+function sanitizeIdea(i, fresh){
+  if(!i || typeof i !== 'object') return null;
+  const idea = {
+    id: fresh ? uid() : (cleanStr(i.id, 40) || uid()),
+    title: String(i.title == null ? '' : i.title).slice(0, 120),
+    notes: String(i.notes == null ? '' : i.notes).slice(0, 5000),
+    sections: []
+  };
+  if(Array.isArray(i.sections)){
+    i.sections.slice(0, 40).forEach(s => {
+      if(!s || typeof s !== 'object') return;
+      idea.sections.push({
+        name: String(s.name == null ? 'Section' : s.name).slice(0, 40),
+        note: String(s.note == null ? '' : s.note).slice(0, 500),
+        key: sanitizeKey(s.key),
+        progression: (Array.isArray(s.progression) ? s.progression : []).slice(0, 64).map(sanitizeChord).filter(Boolean)
+      });
+    });
+  }
+  return idea;
+}
+
+function setSbStatus(msg, isErr){
+  const el = document.getElementById('sbStatus');
+  el.textContent = msg;
+  el.className = 'sb-status' + (isErr ? ' error' : '');
+}
+
+function loadSongbook(){
+  try{
+    const raw = localStorage.getItem(SB_KEY);
+    if(raw){
+      const d = JSON.parse(raw);
+      if(d && Array.isArray(d.ideas)){
+        songbook = d.ideas.map(i => sanitizeIdea(i, false)).filter(Boolean);
+        activeIdeaId = d.active || null;
+      }
+    }
+  }catch(e){ /* storage unavailable: songbook just lives for this session */ }
+  if(!songbook.find(i => i.id === activeIdeaId)) activeIdeaId = songbook[0] ? songbook[0].id : null;
+}
+
+function saveSongbook(){
+  try{
+    localStorage.setItem(SB_KEY, JSON.stringify({ideas: songbook, active: activeIdeaId}));
+  }catch(e){
+    setSbStatus('This browser would not save automatically. Use "Download .txt" or "Make share code" so you keep your ideas.', true);
+  }
+}
+
+function activeIdea(){ return songbook.find(i => i.id === activeIdeaId) || null; }
+
+function keyLabelOf(k){ return noteName(k.root) + ' ' + k.mode; }
+
+function mk(tag, cls, text){
+  const el = document.createElement(tag);
+  if(cls) el.className = cls;
+  if(text != null) el.textContent = text;
+  return el;
+}
+
+function renderSongbook(){
+  const sel = document.getElementById('sbIdeaSelect');
+  sel.innerHTML = '';
+  songbook.forEach(i => {
+    const o = document.createElement('option');
+    o.value = i.id;
+    o.textContent = i.title || 'Untitled idea';
+    sel.appendChild(o);
+  });
+  const idea = activeIdea();
+  document.getElementById('sbEditor').style.display = idea ? 'block' : 'none';
+  document.getElementById('sbEmpty').style.display = idea ? 'none' : 'block';
+  document.getElementById('sbDeleteBtn').style.display = idea ? '' : 'none';
+  sel.style.display = idea ? '' : 'none';
+  if(!idea) return;
+
+  sel.value = idea.id;
+  document.getElementById('sbTitle').value = idea.title;
+  document.getElementById('sbNotes').value = idea.notes;
+
+  const wrap = document.getElementById('sbSections');
+  wrap.innerHTML = '';
+  if(idea.sections.length === 0){
+    const e = mk('div', 'sb-empty', 'No sections yet. Build a progression on the Fretboard tab, then add it here.');
+    e.style.padding = '10px 0';
+    wrap.appendChild(e);
+  }
+
+  idea.sections.forEach((s, si) => {
+    const card = mk('div', 'sb-section');
+    const head = mk('div', 'sb-section-head');
+    head.appendChild(mk('span', 'sb-section-name', s.name + (s.key ? '  ·  ' + keyLabelOf(s.key) : '')));
+
+    const btns = mk('div', 'sb-section-btns');
+    const addBtn = (label, fn) => { const b = mk('button', '', label); b.addEventListener('click', fn); btns.appendChild(b); };
+    addBtn('Load', () => loadSectionIntoProgression(s));
+    addBtn('Update', () => {
+      if(progression.length === 0){ setSbStatus('Your progression on the Fretboard tab is empty, nothing to update from.', true); return; }
+      s.progression = JSON.parse(JSON.stringify(progression)).map(sanitizeChord).filter(Boolean);
+      s.key = {root: parseInt(document.getElementById('keyRoot').value), mode: document.getElementById('keyMode').value};
+      saveSongbook(); renderSongbook(); setSbStatus('Updated "' + s.name + '" from your current progression.');
+    });
+    addBtn('↑', () => { if(si > 0){ [idea.sections[si-1], idea.sections[si]] = [idea.sections[si], idea.sections[si-1]]; saveSongbook(); renderSongbook(); } });
+    addBtn('↓', () => { if(si < idea.sections.length-1){ [idea.sections[si+1], idea.sections[si]] = [idea.sections[si], idea.sections[si+1]]; saveSongbook(); renderSongbook(); } });
+    addBtn('Delete', () => { idea.sections.splice(si, 1); saveSongbook(); renderSongbook(); });
+    head.appendChild(btns);
+    card.appendChild(head);
+
+    const chips = mk('div', 'sb-chips');
+    s.progression.forEach(c => {
+      const chip = mk('div', 'sb-chip');
+      chip.appendChild(mk('b', '', c.label));
+      chip.appendChild(mk('small', '', c.degree + (c.tag === 'borrowed' ? ' · borrowed' : '')));
+      chips.appendChild(chip);
+    });
+    card.appendChild(chips);
+
+    const note = mk('input', 'sb-section-note');
+    note.type = 'text';
+    note.placeholder = 'Note for this section (feel, strumming, lyric idea...)';
+    note.value = s.note;
+    note.addEventListener('input', () => { s.note = note.value; saveSongbook(); });
+    card.appendChild(note);
+
+    wrap.appendChild(card);
+  });
+}
+
+function loadSectionIntoProgression(s){
+  progression = JSON.parse(JSON.stringify(s.progression)).map(sanitizeChord).filter(Boolean);
+  if(s.key){
+    document.getElementById('keyRoot').value = s.key.root;
+    document.getElementById('keyMode').value = s.key.mode;
+    computeChord();
+  }
+  renderProgression();
+  showTab('fretboard');
+  const target = document.querySelector('.progression-section');
+  if(target) target.scrollIntoView({behavior: 'smooth'});
+}
+
+function showTab(name){
+  const fb = name === 'fretboard';
+  document.getElementById('tabFretboard').style.display = fb ? 'flex' : 'none';
+  document.getElementById('tabSongbook').style.display = fb ? 'none' : 'flex';
+  document.getElementById('tabBtnFretboard').classList.toggle('active', fb);
+  document.getElementById('tabBtnSongbook').classList.toggle('active', !fb);
+  if(!fb) renderSongbook();
+}
+
+function ensureIdea(){
+  let idea = activeIdea();
+  if(!idea){
+    idea = {id: uid(), title: '', notes: '', sections: []};
+    songbook.push(idea);
+    activeIdeaId = idea.id;
+    saveSongbook();
+  }
+  return idea;
+}
+
+// ----- text / tab export -----
+function asciiTab(chords){
+  const shaped = chords.filter(c => c.frets && c.tuning);
+  if(!shaped.length) return '';
+  const N = shaped[0].tuning.length;
+  const same = shaped.filter(c => c.tuning.length === N);
+  const cell = Math.max(6, ...same.map(c => c.label.length + 1));
+  const blocks = [];
+  for(let i = 0; i < same.length; i += 4){
+    const group = same.slice(i, i + 4);
+    const lines = [];
+    let header = '   ';
+    group.forEach(c => { header += c.label.padEnd(cell, ' '); });
+    lines.push(header.replace(/\s+$/, ''));
+    for(let s = N - 1; s >= 0; s--){
+      const n = noteName(group[0].tuning[s]);
+      const lab = (s === N - 1 ? n.toLowerCase() : n).padEnd(2, ' ');
+      let line = lab + '|';
+      group.forEach(c => {
+        const v = c.frets[s];
+        const t = (v === 'X' || v == null) ? 'x' : String(v);
+        line += ('-' + t).padEnd(cell, '-');
+      });
+      lines.push(line + '|');
+    }
+    blocks.push(lines.join('\n'));
+  }
+  return blocks.join('\n\n');
+}
+
+function ideaToText(idea){
+  const out = [];
+  const title = idea.title || 'Untitled idea';
+  out.push(title);
+  out.push('='.repeat(Math.min(title.length, 60)));
+  if(idea.notes.trim()){ out.push(''); out.push(idea.notes.trim()); }
+  idea.sections.forEach(s => {
+    out.push('');
+    out.push('[' + s.name + ']' + (s.key ? '  (key: ' + keyLabelOf(s.key) + ')' : ''));
+    if(s.progression.length){
+      out.push('Chords:  ' + s.progression.map(c => c.label).join(' | '));
+      out.push('Numbers: ' + s.progression.map(c => c.degree).join(' - '));
+      const tab = asciiTab(s.progression);
+      if(tab){ out.push(''); out.push(tab); }
+    }
+    if(s.note.trim()) out.push('Note: ' + s.note.trim());
+  });
+  return out.join('\n');
+}
+
+function putInOutput(text, okMsg){
+  const out = document.getElementById('sbOutput');
+  out.value = text;
+  const done = ok => setSbStatus(ok ? okMsg : 'Select the text in the box below and copy it manually.', !ok);
+  const fallback = () => {
+    out.focus(); out.select();
+    let ok = false;
+    try{ ok = document.execCommand('copy'); }catch(e){ ok = false; }
+    done(ok);
+  };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(() => done(true)).catch(fallback);
+  } else {
+    fallback();
+  }
+}
+
+function makeShareCode(idea){
+  const payload = {title: idea.title, notes: idea.notes, sections: idea.sections};
+  return 'CF1:' + btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+}
+
+function importShareCode(raw){
+  const code = (raw || '').replace(/\s+/g, '');
+  if(!code.startsWith('CF1:') || code.length > 300000) throw new Error('bad code');
+  const json = decodeURIComponent(escape(atob(code.slice(4))));
+  const idea = sanitizeIdea(JSON.parse(json), true);
+  if(!idea || (!idea.title && idea.sections.length === 0 && !idea.notes)) throw new Error('empty');
+  return idea;
+}
+
+document.getElementById('tabBtnFretboard').addEventListener('click', () => showTab('fretboard'));
+document.getElementById('tabBtnSongbook').addEventListener('click', () => showTab('songbook'));
+
+document.getElementById('sendToSongbookBtn').addEventListener('click', () => {
+  ensureIdea();
+  showTab('songbook');
+  setSbStatus(progression.length ? 'Pick a section name below and hit "+ Add current progression as section".' : 'Your progression is empty. Add some chords on the Fretboard tab first.', progression.length === 0);
+  const row = document.querySelector('.sb-add-row');
+  if(row) row.scrollIntoView({behavior: 'smooth', block: 'center'});
+});
+
+document.getElementById('sbIdeaSelect').addEventListener('change', (e) => {
+  activeIdeaId = e.target.value;
+  saveSongbook();
+  renderSongbook();
+  setSbStatus('');
+});
+
+document.getElementById('sbNewBtn').addEventListener('click', () => {
+  const idea = {id: uid(), title: '', notes: '', sections: []};
+  songbook.push(idea);
+  activeIdeaId = idea.id;
+  saveSongbook();
+  renderSongbook();
+  setSbStatus('');
+  document.getElementById('sbTitle').focus();
+});
+
+document.getElementById('sbDeleteBtn').addEventListener('click', () => {
+  const idea = activeIdea();
+  if(!idea) return;
+  if(!window.confirm('Delete "' + (idea.title || 'Untitled idea') + '"? This cannot be undone.')) return;
+  songbook = songbook.filter(i => i.id !== idea.id);
+  activeIdeaId = songbook[0] ? songbook[0].id : null;
+  saveSongbook();
+  renderSongbook();
+  setSbStatus('');
+});
+
+document.getElementById('sbTitle').addEventListener('input', (e) => {
+  const idea = activeIdea();
+  if(!idea) return;
+  idea.title = e.target.value;
+  const sel = document.getElementById('sbIdeaSelect');
+  if(sel.selectedIndex >= 0) sel.options[sel.selectedIndex].textContent = idea.title || 'Untitled idea';
+  saveSongbook();
+});
+
+document.getElementById('sbNotes').addEventListener('input', (e) => {
+  const idea = activeIdea();
+  if(!idea) return;
+  idea.notes = e.target.value;
+  saveSongbook();
+});
+
+document.getElementById('sbAddSectionBtn').addEventListener('click', () => {
+  const idea = ensureIdea();
+  if(progression.length === 0){
+    setSbStatus('Your progression is empty. Add chords on the Fretboard tab first.', true);
+    return;
+  }
+  const name = document.getElementById('sbSectionName').value;
+  idea.sections.push({
+    name: name,
+    note: '',
+    key: {root: parseInt(document.getElementById('keyRoot').value), mode: document.getElementById('keyMode').value},
+    progression: JSON.parse(JSON.stringify(progression)).map(sanitizeChord).filter(Boolean)
+  });
+  saveSongbook();
+  renderSongbook();
+  setSbStatus('Added as "' + name + '".');
+});
+
+document.getElementById('sbCopyTextBtn').addEventListener('click', () => {
+  const idea = activeIdea();
+  if(!idea) return;
+  putInOutput(ideaToText(idea), 'Copied! Paste it into a message to your friends.');
+});
+
+document.getElementById('sbDownloadTxtBtn').addEventListener('click', () => {
+  const idea = activeIdea();
+  if(!idea) return;
+  const text = ideaToText(idea);
+  document.getElementById('sbOutput').value = text;
+  const slug = (idea.title || 'song-idea').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'song-idea';
+  const blob = new Blob([text], {type: 'text/plain'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = slug + '.txt';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  setSbStatus('Downloaded ' + slug + '.txt');
+});
+
+document.getElementById('sbShareCodeBtn').addEventListener('click', () => {
+  const idea = activeIdea();
+  if(!idea) return;
+  putInOutput(makeShareCode(idea), 'Share code copied. Your friend pastes it into "Got a code from a friend?" in their own copy of the app.');
+});
+
+document.getElementById('sbImportBtn').addEventListener('click', () => {
+  try{
+    const idea = importShareCode(document.getElementById('sbImportBox').value);
+    songbook.push(idea);
+    activeIdeaId = idea.id;
+    saveSongbook();
+    renderSongbook();
+    document.getElementById('sbImportBox').value = '';
+    setSbStatus('Imported "' + (idea.title || 'Untitled idea') + '".');
+  }catch(e){
+    setSbStatus('That does not look like a valid share code. Make sure you pasted the whole thing, starting with CF1:', true);
+  }
+});
+
 const TRIAD_TYPES = {
   'Major':      {intervals:[0,4,7], suffix:''},
   'Minor':      {intervals:[0,3,7], suffix:'m'},
@@ -1730,7 +2265,8 @@ document.getElementById('saveConfigBtn').addEventListener('click', () => {
     },
     flipped: flipped,
     highlights: Array.from(highlightSet),
-    progression: progression
+    progression: progression,
+    songbook: {ideas: songbook, active: activeIdeaId}
   };
   const blob = new Blob([JSON.stringify(state, null, 2)], {type: 'application/json'});
   const url = URL.createObjectURL(blob);
@@ -1800,7 +2336,13 @@ function applyLoadedConfig(data){
     });
   }
   if(Array.isArray(data.progression)){
-    progression = data.progression;
+    progression = data.progression.map(sanitizeChord).filter(Boolean);
+  }
+  if(data.songbook && Array.isArray(data.songbook.ideas)){
+    songbook = data.songbook.ideas.map(i => sanitizeIdea(i, false)).filter(Boolean);
+    activeIdeaId = songbook.find(i => i.id === data.songbook.active) ? data.songbook.active : (songbook[0] ? songbook[0].id : null);
+    saveSongbook();
+    renderSongbook();
   }
   buildBoard();
   render();
@@ -1813,10 +2355,12 @@ populateTuningSelect();
 populateHighlightPalette();
 populateScaleSelects();
 populateTriadSelects();
+loadSongbook();
 buildBoard();
 render();
 renderProgression();
 updateOrientHint();
+renderSongbook();
 </script>
 </body>
 </html>
